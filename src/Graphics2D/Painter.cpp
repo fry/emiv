@@ -25,6 +25,7 @@ namespace Graphics2D {
   }
   
   Color Painter::GetColor() {
+    // Determine what color to use from the color string
     const std::string color = GetColorString();
     if (color == "Black")
       return Color::black();
@@ -38,9 +39,24 @@ namespace Graphics2D {
     return Color::black();
   }
   
+  PrimitiveBase* Painter::GetCurrentPrimitive(int x, int y) {
+    if (primitive_string_ == "Point") {
+      return new PrimitivePoint(GetColor(), Coordinate(x, y));
+    } else if (primitive_string_ == "Line") {
+      return new PrimitiveLine(GetColor(), Coordinate(draw_start_x, draw_start_y), Coordinate(x, y));
+    } else if (primitive_string_ == "Box") {
+      /*std::vector
+      AddPrimitive(PrimitivePoint(GetColor(), Coordinate(x, y)));*/
+    }
+    
+    return NULL;
+  }
+  
   void Painter::Draw() {
+    // Clear the image
     image_->FillZero();
     
+    // Iterate through contained primitives and draw them
     std::vector<PrimitiveBase*>::iterator iter, end;
     end = primitives_.end();
     
@@ -48,6 +64,7 @@ namespace Graphics2D {
       (*iter)->Draw(image_);
     }
     
+    // If a "ghost primitive" is set, draw it
     if (temporary_primitive_.get() != 0)
       temporary_primitive_->Draw(image_);
   }
@@ -66,21 +83,18 @@ namespace Graphics2D {
   }
   
   void Painter::MouseUp(int x, int y) {
-    if (primitive_string_ == "Point") {
-      AddPrimitive(new PrimitivePoint(GetColor(), Coordinate(x, y)));
-    } else if (primitive_string_ == "Line") {
-      AddPrimitive(new PrimitiveLine(GetColor(), Coordinate(draw_start_x, draw_start_y), Coordinate(x, y)));
-    } else if (primitive_string_ == "Box") {
-      /*std::vector
-      AddPrimitive(PrimitivePoint(GetColor(), Coordinate(x, y)));*/
-    }
+    // Add the finished primitive
+    PrimitiveBase* prim = GetCurrentPrimitive(x, y);
+    AddPrimitive(prim);
     
+    // And get rid of any ghost primitive
     temporary_primitive_.release();
   }
   
   void Painter::MouseMove(int x, int y) {
-    if (primitive_string_ == "Line") {
-      temporary_primitive_.reset(new PrimitiveLine(GetColor(), Coordinate(draw_start_x, draw_start_y), Coordinate(x, y)));
+    // Set the correct ghost primitive if possible
+    if (primitive_string_ == "Line" || primitive_string_ == "Box") {
+      temporary_primitive_.reset(GetCurrentPrimitive(x, y));
     }
   }
 

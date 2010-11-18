@@ -13,7 +13,6 @@ namespace Graphics2D {
       virtual ~Painter();
       
       void AddPrimitive(PrimitiveBase* primitive);
-      Color GetColor();
       
       virtual void Draw();
       
@@ -28,6 +27,9 @@ namespace Graphics2D {
       
       virtual void KeyPressed(unsigned char ch, int x, int y);
     protected:
+      Color GetColor();
+      PrimitiveBase* GetCurrentPrimitive(int x, int y);
+            
       std::auto_ptr<PrimitiveBase> temporary_primitive_;
       std::vector<PrimitiveBase*> primitives_;
       
