@@ -1,6 +1,8 @@
 #ifndef PAINTER_HH
 #define PAINTER_HH
 
+#include <memory>
+
 #include <Graphics2DBase/PrimitiveBase.hh>
 #include <Graphics2DBase/PainterBase.hh>
 
@@ -26,7 +28,7 @@ namespace Graphics2D {
       
       virtual void KeyPressed(unsigned char ch, int x, int y);
     protected:
-      PrimitiveBase* temporary_primitive;
+      std::auto_ptr<PrimitiveBase> temporary_primitive_;
       std::vector<PrimitiveBase*> primitives_;
       
       std::string color_string_;

@@ -6,11 +6,18 @@
 
 namespace Graphics2D {
   Painter::Painter() {
-    temporary_primitive = 0;
   }
   
   Painter::~Painter() {
-    // TODO: destroy objects
+    // Delete all primitives we own
+    std::vector<PrimitiveBase*>::iterator iter, end;
+    end = primitives_.end();
+    
+    for (iter = primitives_.begin(); iter != end; ++iter) {
+      delete *iter;
+    }
+    
+    primitives_.clear();
   }
   
   void Painter::AddPrimitive(PrimitiveBase* primitive) {
@@ -32,6 +39,8 @@ namespace Graphics2D {
   }
   
   void Painter::Draw() {
+    image_->FillZero();
+    
     std::vector<PrimitiveBase*>::iterator iter, end;
     end = primitives_.end();
     
@@ -39,8 +48,8 @@ namespace Graphics2D {
       (*iter)->Draw(image_);
     }
     
-    if (temporary_primitive != 0)
-      temporary_primitive->Draw(image_);
+    if (temporary_primitive_.get() != 0)
+      temporary_primitive_->Draw(image_);
   }
 
   std::string Painter::GetColorString() {
@@ -65,9 +74,14 @@ namespace Graphics2D {
       /*std::vector
       AddPrimitive(PrimitivePoint(GetColor(), Coordinate(x, y)));*/
     }
+    
+    temporary_primitive_.release();
   }
   
   void Painter::MouseMove(int x, int y) {
+    if (primitive_string_ == "Line") {
+      temporary_primitive_.reset(new PrimitiveLine(GetColor(), Coordinate(draw_start_x, draw_start_y), Coordinate(x, y)));
+    }
   }
 
   void Painter::KeyPressed(unsigned char ch, int x, int y) {
