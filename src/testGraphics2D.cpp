@@ -1,0 +1,28 @@
+// Gruppe 8
+// Serie 2
+// Alexander Koch, 773036
+// Eike Siewertsen, 847522
+
+#include <Graphics2D/Image.hh>
+#include <iostream>
+#include <Graphics2DBase/Canvas2D.hh>
+#include <Graphics2D/Painter.hh>
+#include <Graphics2D/PrimitiveBox.hh>
+#include <Graphics2DBase/Coordinate.hh>
+#include <vector>
+
+using namespace Graphics2D;
+
+int main(int argc, char** argv) {
+  Canvas2D c2d;
+  c2d.Init(50, 50, 512, 512);
+  Image im;
+  im.Init(512, 512);
+  
+  Painter painter;
+  c2d.RegisterImage(&im);
+  c2d.RegisterPainter(&painter);
+
+  c2d.Start();
+  return 0;
+}
