@@ -27,8 +27,8 @@ namespace Graphics2D {
   Color Painter::GetColor() {
     // Determine what color to use from the color string
     const std::string color = GetColorString();
-    if (color == "Black")
-      return Color::black();
+    if (color == "White")
+      return Color::white();
     else if (color == "Red")
       return Color::red();
     else if (color == "Green")
@@ -45,8 +45,10 @@ namespace Graphics2D {
     } else if (primitive_string_ == "Line") {
       return new PrimitiveLine(GetColor(), Coordinate(draw_start_x, draw_start_y), Coordinate(x, y));
     } else if (primitive_string_ == "Box") {
-      /*std::vector
-      AddPrimitive(PrimitivePoint(GetColor(), Coordinate(x, y)));*/
+      std::vector<Coordinate> boxCoords;
+      boxCoords.push_back(Coordinate(draw_start_x,draw_start_y));
+      boxCoords.push_back(Coordinate(x,y));
+      return new PrimitiveBox(GetColor(), boxCoords);
     }
     
     return NULL;
@@ -110,7 +112,7 @@ namespace Graphics2D {
         primitive_string_ = "Box";
         break;
       case '1':
-        color_string_ = "Black";
+        color_string_ = "White";
         break;
       case '2':
         color_string_ = "Red";
@@ -131,4 +133,3 @@ namespace Graphics2D {
     }
   }
 }
-

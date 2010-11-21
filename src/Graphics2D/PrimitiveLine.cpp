@@ -39,7 +39,7 @@ namespace Graphics2D {
     // If the line goes downwards, we have to decrease y instead of increase
     int stepy = y0 < y1 ? 1 : -1;
     int y = y0;
-    int e = 2*dx-dy;
+    int e = 2*dy-dx;
     
     const Color& color = GetColor();
     
@@ -47,9 +47,9 @@ namespace Graphics2D {
   	const int height = im->GetHeight();
 	
 	// variables to store the coordinates to be drawn later
-    int drawx, drawy=0;
+    int drawx, drawy;
     
-    for (int x = x0; x < x1; x++) {
+    for (int x = x0; x <= x1; x++) {
       // Decide whether to move up depending on the decision value
       if (e > 0) {
         y += stepy;
