@@ -12,6 +12,7 @@ namespace Graphics2D {
       Painter();
       virtual ~Painter();
       
+      // Add a primitive to this Painter, takes ownership of the pointer
       void AddPrimitive(PrimitiveBase* primitive);
       
       virtual void Draw();
@@ -29,9 +30,15 @@ namespace Graphics2D {
     protected:
       Color GetColor();
       PrimitiveBase* GetCurrentPrimitive(int x, int y);
-            
+      
+      // The ghost primitive shown when drawing a primitive
       std::auto_ptr<PrimitiveBase> temporary_primitive_;
+      
+      // The list of primitives contained in this picture
       std::vector<PrimitiveBase*> primitives_;
+      
+      // The points of a polygon that is being drawn
+      std::vector<Coordinate> polygon_points_;
       
       std::string color_string_;
       std::string primitive_string_;

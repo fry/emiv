@@ -38,17 +38,26 @@ namespace Graphics2D {
       
     return Color::black();
   }
-  
+
   PrimitiveBase* Painter::GetCurrentPrimitive(int x, int y) {
     if (primitive_string_ == "Point") {
       return new PrimitivePoint(GetColor(), Coordinate(x, y));
     } else if (primitive_string_ == "Line") {
       return new PrimitiveLine(GetColor(), Coordinate(draw_start_x, draw_start_y), Coordinate(x, y));
     } else if (primitive_string_ == "Box") {
+      // Draw a box with its two points
       std::vector<Coordinate> boxCoords;
-      boxCoords.push_back(Coordinate(draw_start_x,draw_start_y));
-      boxCoords.push_back(Coordinate(x,y));
+      boxCoords.push_back(Coordinate(draw_start_x, draw_start_y));
+      boxCoords.push_back(Coordinate(x, y));
       return new PrimitiveBox(GetColor(), boxCoords);
+    } else if (primitive_string_ == "Polygon") {
+      // Only return a primitive for polygons if there's going to be
+      // at least two points in it
+      if (!polygon_points_.empty()) {
+        std::vector<Coordinate> new_points = polygon_points_;
+        new_points.push_back(Coordinate(x, y));
+        return new PrimitivePolygon(GetColor(), new_points);
+      }
     }
     
     return NULL;
@@ -85,9 +94,38 @@ namespace Graphics2D {
   }
   
   void Painter::MouseUp(int x, int y) {
-    // Add the finished primitive
-    PrimitiveBase* prim = GetCurrentPrimitive(x, y);
-    AddPrimitive(prim);
+    // Special handling for polygons
+    if (primitive_string_ == "Polygon") {
+      bool stop_plotting = false;
+      
+      // Determine whether we clicked near the start point of our polygon
+      // we also can't finish a polygon if it only has one point
+      if (polygon_points_.size() > 1) {
+        const int dx = std::abs(x - polygon_points_[0].GetX());
+        const int dy = std::abs(y - polygon_points_[0].GetY());
+        
+        stop_plotting = dx < 10 && dy < 10;
+      }
+      
+      if (stop_plotting) {
+        // We're supposed to stop plotting, add the finished polygon
+        AddPrimitive(new PrimitivePolygon(GetColor(), polygon_points_));
+
+        // Clear polygon point cache
+        polygon_points_.clear();
+      } else {
+        polygon_points_.push_back(Coordinate(x, y));
+      
+        // MouseMove only gets called when the mouse is moved while a key is pressed,
+        // so invoke it once here to update the ghost primitive
+        MouseMove(x, y);
+        return;
+      }
+    } else {
+      // Add the finished primitive
+      PrimitiveBase* prim = GetCurrentPrimitive(x, y);
+      AddPrimitive(prim);
+    }
     
     // And get rid of any ghost primitive
     temporary_primitive_.release();
@@ -95,7 +133,7 @@ namespace Graphics2D {
   
   void Painter::MouseMove(int x, int y) {
     // Set the correct ghost primitive if possible
-    if (primitive_string_ == "Line" || primitive_string_ == "Box") {
+    if (primitive_string_ == "Line" || primitive_string_ == "Box" || primitive_string_ == "Polygon") {
       temporary_primitive_.reset(GetCurrentPrimitive(x, y));
     }
   }
@@ -111,6 +149,9 @@ namespace Graphics2D {
       case 'b':
         primitive_string_ = "Box";
         break;
+      case 'o':
+        primitive_string_ = "Polygon";
+        break;
       case '1':
         color_string_ = "White";
         break;
@@ -125,7 +166,7 @@ namespace Graphics2D {
         break;
       case 'h':
         std::cout << "Help" << std::endl
-                  << "Shapes: p Point, l Line, b Box" << std::endl
+                  << "Shapes: p Point, l Line, b Box, o Polygon" << std::endl
                   << "Colors: 1 Black, 2 Red, 3 Green, 4 Blue" << std::endl;
         break;
       default:
