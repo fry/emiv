@@ -14,13 +14,22 @@
 using namespace Graphics2D;
 
 int main(int argc, char** argv) {
-  Canvas2D c2d;
-  c2d.Init(50, 50, 512, 512);
-  Image im;
-  im.Init(512, 512);
+  if (argc != 2) {
+    std::cout << "usage: " << argv[0] << " background.ppm" << std::endl;
+    return 0;
+  }
   
-  Painter painter;
-  c2d.RegisterImage(&im);
+  Image image;
+  image.LoadPPM(argv[1]);
+  
+  Image image_surface;
+  image_surface.Init(image.GetWidth(), image.GetHeight());
+  
+  Canvas2D c2d;
+  c2d.Init(100, 100, image.GetWidth(), image.GetHeight());
+  
+  Painter painter(&image);
+  c2d.RegisterImage(&image_surface);
   c2d.RegisterPainter(&painter);
 
   c2d.Start();

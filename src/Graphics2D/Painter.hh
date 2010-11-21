@@ -9,7 +9,7 @@
 namespace Graphics2D {
   class Painter: public PainterBase {
     public:
-      Painter();
+      Painter(ImageBase* background);
       virtual ~Painter();
       
       // Add a primitive to this Painter, takes ownership of the pointer
@@ -30,6 +30,9 @@ namespace Graphics2D {
     protected:
       Color GetColor();
       PrimitiveBase* GetCurrentPrimitive(int x, int y);
+      
+      // The background image to use
+      ImageBase* background_;
       
       // The ghost primitive shown when drawing a primitive
       std::auto_ptr<PrimitiveBase> temporary_primitive_;

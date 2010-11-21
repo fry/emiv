@@ -5,7 +5,8 @@
 #include <Graphics2D/PrimitivePolygon.hh>
 
 namespace Graphics2D {
-  Painter::Painter() {
+  Painter::Painter(ImageBase* background) {
+    background_ = background;
   }
   
   Painter::~Painter() {
@@ -65,7 +66,10 @@ namespace Graphics2D {
   
   void Painter::Draw() {
     // Clear the image
-    image_->FillZero();
+    if (background_ == NULL)
+      image_->FillZero();
+    else
+      *image_ = *background_;
     
     // Iterate through contained primitives and draw them
     std::vector<PrimitiveBase*>::iterator iter, end;
@@ -167,7 +171,7 @@ namespace Graphics2D {
       case 'h':
         std::cout << "Help" << std::endl
                   << "Shapes: p Point, l Line, b Box, o Polygon" << std::endl
-                  << "Colors: 1 Black, 2 Red, 3 Green, 4 Blue" << std::endl;
+                  << "Colors: 1 White, 2 Red, 3 Green, 4 Blue" << std::endl;
         break;
       default:
         break;
