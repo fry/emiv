@@ -13,4 +13,26 @@ namespace Graphics2D {
   void PrimitiveBase::GetName(std::string &name) {
     name = name_;
   }
+  
+  void PrimitiveBase::Rotate(float angle) {
+    if (coordinates_.empty())
+      return;
+
+    Coordinate origin;
+    
+    std::vector<Coordinate>::iterator iter, end;
+    end = coordinates_.end();
+    
+    // Determine arithmetic mean
+    for (iter = coordinates_.begin(); iter != end; ++iter) {
+      origin += *iter;
+    }
+    
+    origin *= 1.0f / coordinates_.size();
+
+    // Call rotate on every point
+    for (iter = coordinates_.begin(); iter != end; ++iter) {
+      iter->Rotate(origin, angle);
+    }
+  }
 }

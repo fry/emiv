@@ -30,6 +30,8 @@ namespace Graphics2D {
     }
    
     virtual void Draw(ImageBase *im) = 0;
+    
+    void Rotate(float angle);
   protected:
     std::vector<Coordinate> coordinates_;
     Color color_;

@@ -3,6 +3,9 @@
 #include <Graphics2D/PrimitiveLine.hh>
 #include <Graphics2D/PrimitiveBox.hh>
 #include <Graphics2D/PrimitivePolygon.hh>
+#include <Graphics2D/PrimitiveStar.hh>
+
+#include <cmath>
 
 namespace Graphics2D {
   Painter::Painter(ImageBase* background) {
@@ -59,6 +62,12 @@ namespace Graphics2D {
         new_points.push_back(Coordinate(x, y));
         return new PrimitivePolygon(GetColor(), new_points);
       }
+    } else if (primitive_string_ == "Star") {
+      const float distance = std::sqrt(
+        std::pow(draw_start_x - x, 2.0) +
+        std::pow(draw_start_y - y, 2.0));
+      
+      return new PrimitiveStar(GetColor(), Coordinate(draw_start_x, draw_start_y), distance);
     }
     
     return NULL;
@@ -76,6 +85,7 @@ namespace Graphics2D {
     end = primitives_.end();
     
     for (iter = primitives_.begin(); iter != end; ++iter) {
+      (*iter)->Rotate(2*M_PI * (1.0/20.0 * 1.0/25.0));
       (*iter)->Draw(image_);
     }
     
@@ -137,7 +147,7 @@ namespace Graphics2D {
   
   void Painter::MouseMove(int x, int y) {
     // Set the correct ghost primitive if possible
-    if (primitive_string_ == "Line" || primitive_string_ == "Box" || primitive_string_ == "Polygon") {
+    if (primitive_string_ != "Point") {
       temporary_primitive_.reset(GetCurrentPrimitive(x, y));
     }
   }
@@ -156,6 +166,9 @@ namespace Graphics2D {
       case 'o':
         primitive_string_ = "Polygon";
         break;
+      case 's':
+        primitive_string_ = "Star";
+        break;
       case '1':
         color_string_ = "White";
         break;
@@ -170,7 +183,7 @@ namespace Graphics2D {
         break;
       case 'h':
         std::cout << "Help" << std::endl
-                  << "Shapes: p Point, l Line, b Box, o Polygon" << std::endl
+                  << "Shapes: p Point, l Line, b Box, o Polygon, s Star" << std::endl
                   << "Colors: 1 White, 2 Red, 3 Green, 4 Blue" << std::endl;
         break;
       default:

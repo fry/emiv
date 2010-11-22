@@ -14,6 +14,7 @@ add_library(Graphics2D
   PrimitivePolygon.cpp
   PrimitiveBox.hh
   PrimitiveBox.cpp
+  PrimitiveStar.cpp
   Painter.hh
   Painter.cpp)
 target_link_libraries(Graphics2D Graphics2DBase)
