@@ -1,3 +1,9 @@
+/*
+ * a glut window drawing a registered image to screen.
+ * a 2d painter can be registered to paint primitives
+ * @author fkellner, 10/10
+ */
+
 #include <iostream>
 #include <cstdlib>
 #ifdef __APPLE__
@@ -5,10 +11,11 @@
 #else
   #include <GL/glut.h>
 #endif
+
 #include <Graphics2DBase/Canvas2D.hh>
 
 namespace Graphics2D {
-  Canvas2D::Canvas2D *Canvas2D::instance_ = NULL;
+  Canvas2D *Canvas2D::instance_ = NULL;
 
   Canvas2D::Canvas2D() {
     painter_ = NULL;
@@ -23,6 +30,8 @@ namespace Graphics2D {
     instance_ = this;
     width_ = width;
     height_= height;
+    wreshape_ = 1.0f;
+    hreshape_ = 1.0f;
     posx_ = posx;
     posy_ = posy;
     return 0;
@@ -55,7 +64,7 @@ namespace Graphics2D {
   }
 
   Canvas2D::~Canvas2D() {
-    // TODO Auto-generated destructor stub
+
   }
   
   void Canvas2D::Start() {
@@ -70,7 +79,8 @@ namespace Graphics2D {
     glutMouseFunc(MouseButtonEvents);
     glutMotionFunc(MouseMotionEvents);
     glutKeyboardFunc(KeyboardEvents);
-    glutIdleFunc(Idle);
+    glutReshapeFunc(Reshape);
+    glutTimerFunc(40, OnTimer, 1);
     glMatrixMode (GL_PROJECTION);
     glLoadIdentity ();
     glOrtho (0, width_, height_, 0, 0, 1);
@@ -131,13 +141,16 @@ namespace Graphics2D {
     }
   }
   
-  void Canvas2D::Idle() {
+  void Canvas2D::OnTimer(int value) {
     glutPostRedisplay();
     glutSwapBuffers();
+    glutTimerFunc(40, OnTimer, value+1);
   }
 
   void Canvas2D::MouseButtonEvents(int button, int state, int x, int y) {
     if (instance_->painter_ == NULL) { return; }
+    x = (int) float(x)*instance_->wreshape_;
+    y = (int) float(y)*instance_->hreshape_;
     if (button == GLUT_LEFT_BUTTON) {
       if (state == GLUT_DOWN) {
         instance_->painter_->MouseDown(x,y);
@@ -146,22 +159,25 @@ namespace Graphics2D {
         instance_->painter_->MouseUp(x,y);
       }
     }
-    glutPostRedisplay();
-    glutSwapBuffers();
   }
 
   void Canvas2D::MouseMotionEvents(int x, int y) {
     if (instance_->painter_ == NULL) { return; }
+    x = (int) float(x)*instance_->wreshape_;
+    y = (int) float(y)*instance_->hreshape_;
     instance_->painter_->MouseMove(x,y);
-    glutPostRedisplay();
-    glutSwapBuffers();
   }
   
   void Canvas2D::KeyboardEvents(unsigned char ch, int x, int y) {
     if (instance_->painter_ == NULL) { return; }
-    instance_->painter_->KeyPressed(ch, x, y);
-    glutPostRedisplay();
-    glutSwapBuffers();
+    x = (int) float(x)*instance_->wreshape_;
+    y = (int) float(y)*instance_->hreshape_;
+    instance_->painter_->KeyPressed(ch,x,y);
   }
 
+  void Canvas2D::Reshape(int x, int y) {
+    instance_->wreshape_ = float(instance_->width_) / float(x); 
+    instance_->hreshape_ = float(instance_->height_) / float(y);
+    glViewport(0,0,x,y);
+  }
 }

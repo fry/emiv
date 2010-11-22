@@ -63,11 +63,17 @@ namespace Graphics2D {
         return new PrimitivePolygon(GetColor(), new_points);
       }
     } else if (primitive_string_ == "Star") {
-      const float distance = std::sqrt(
-        std::pow(draw_start_x - x, 2.0) +
-        std::pow(draw_start_y - y, 2.0));
+      const Coordinate vec(draw_start_x - x, draw_start_y - y);
       
-      return new PrimitiveStar(GetColor(), Coordinate(draw_start_x, draw_start_y), distance);
+      const float distance = std::sqrt(
+        std::pow(vec.GetX(), 2.0) +
+        std::pow(vec.GetY(), 2.0));
+      
+      const float angle = std::acos((float)vec.GetY() / distance);
+      
+      PrimitiveStar* star = new PrimitiveStar(GetColor(), Coordinate(draw_start_x, draw_start_y), distance);
+      star->Rotate(angle);
+      return star;
     }
     
     return NULL;
@@ -85,7 +91,7 @@ namespace Graphics2D {
     end = primitives_.end();
     
     for (iter = primitives_.begin(); iter != end; ++iter) {
-      (*iter)->Rotate(2*M_PI * (1.0/20.0 * 1.0/25.0));
+      (*iter)->Rotate(2*M_PI * (1.0/4.0 * 1.0/25.0));
       (*iter)->Draw(image_);
     }
     
@@ -138,7 +144,8 @@ namespace Graphics2D {
     } else {
       // Add the finished primitive
       PrimitiveBase* prim = GetCurrentPrimitive(x, y);
-      AddPrimitive(prim);
+      if (prim != NULL)
+        AddPrimitive(prim);
     }
     
     // And get rid of any ghost primitive
