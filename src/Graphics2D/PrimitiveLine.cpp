@@ -4,9 +4,20 @@ namespace Graphics2D {
   PrimitiveLine::PrimitiveLine(const Color& color, const Coordinate& start, const Coordinate& end) : PrimitiveBase(color) {
     coordinates_.push_back(start);
     coordinates_.push_back(end);
-    name_="Line";
+    name_ = "Line";
+    
+    int dx = end.GetX() - start.GetX();
+    if (dx == 0)
+      m = 0;
+    else
+      m = (end.GetY() - start.GetY()) / dx;
   }
   
+  int PrimitiveLine::IntersectPoint(int y) {
+    if (m == 0)
+      return y;
+    return (y - coordinates_[0].GetY()) / m;
+  }
   
   void PrimitiveLine::Draw(ImageBase* im) {
     Coordinate start = GetCoordinates()[0];
@@ -37,7 +48,7 @@ namespace Graphics2D {
 
     // Setup loop variables
     // If the line goes downwards, we have to decrease y instead of increase
-    int stepy = y0 < y1 ? 1 : -1;
+    const int stepy = y0 < y1 ? 1 : -1;
     int y = y0;
     int e = 2*dy-dx;
     

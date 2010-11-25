@@ -16,6 +16,9 @@ namespace Graphics2D {
     virtual void SetCoordinates(const std::vector<Coordinate>& coordinates);
     
     void Draw(ImageBase* im);
+  protected:
+    
+    std::vector<PrimitiveLine> BuildLines(); 
   };
 }
 

@@ -9,6 +9,10 @@ namespace Graphics2D {
   public:
     PrimitiveLine(const Color& color, const Coordinate& start, const Coordinate& end);
     void Draw(ImageBase* im);
+  
+    int IntersectPoint(int y);
+  protected:
+    float m;
   };
 }
 
