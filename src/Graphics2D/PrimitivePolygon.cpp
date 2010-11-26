@@ -35,11 +35,13 @@ namespace {
         x_min = ex;
         x_max = sx;
       }
-      
-      // the x_max - x_min difference decides the sign of the slope
-      m = static_cast<float>(y_max - y_min) / (x_max - x_min);
 
-      inv_m = 1.0f / m;
+      if (!vertical) {
+        // the x_max - x_min difference decides the sign of the slope
+        m = static_cast<float>(y_max - y_min) / (x_max - x_min);
+
+        inv_m = 1.0f / m;
+      }
     }
   };
   
@@ -75,11 +77,11 @@ namespace Graphics2D {
     PrimitiveLine line(GetColor(), coordinates_[coordinates_.size() - 1], coordinates_[0]);
     line.Draw(im);
     
+    // Fill polygon
     ScanlineFill(im);
   }
   
   void PrimitivePolygon::ScanlineFill(ImageBase* im) {
-    //  (y - b) * 1 / m = x
     typedef std::multimap<int, line_data> table_type;
     typedef std::pair<int, line_data> pair_type;
     table_type edge_table;
@@ -102,6 +104,7 @@ namespace Graphics2D {
     std::list<line_data>::iterator aet_iter, aet_end;
     aet_end = active_edge_table.end();
     
+    // Set up edge_table iterators
     table_type::iterator iter, end;
     std::pair<table_type::iterator, table_type::iterator> results;
     end = edge_table.end();
@@ -123,29 +126,37 @@ namespace Graphics2D {
       int parity = 0;
       int last_x = 0;
       for (aet_iter = active_edge_table.begin(); aet_iter != aet_end; ) {
+        // Round down intersection point
         int intersect_x = (int)aet_iter->x_min;
+        
+        // Draw a horizontal line once we hit a second intersection
         if (parity % 2 != 0) {
-          for (int x = last_x; x < intersect_x; x++) {
+          for (int x = last_x; x <= intersect_x; x++) {
             point.SetCoordinate(Coordinate(x, y));
             point.Draw(im);
           }
-        } else {
-          last_x = intersect_x;
         }
         
-        parity ++;
+        // Don't count intersection if it's on y_max (to avoid problems with two meeting lines)
+        if (y != aet_iter->y_max)
+          parity ++;
+
+        last_x = intersect_x;
         
         // remove element if it is leaving the interesting area, otherwise update x
         if (aet_iter->y_max == y) {
           aet_iter = active_edge_table.erase(aet_iter);
           continue;
-        } else if (!aet_iter->vertical)
+        } else if (!aet_iter->vertical) {
+          // update line position
           aet_iter->x_min += aet_iter->inv_m;
+        }
         
-        // increment iterator
+        // increment iterator if we didn't remove an element
         ++aet_iter;
       }
       
+      // continue with next line
       y ++;
     }
   }

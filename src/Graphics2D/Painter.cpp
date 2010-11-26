@@ -92,7 +92,7 @@ namespace Graphics2D {
     
     // Rotate and draw all primitives at fixed speed
     for (iter = primitives_.begin(); iter != end; ++iter) {
-      //(*iter)->Rotate(2*M_PI * (1.0/4.0 * 1.0/25.0));
+      (*iter)->Rotate(2*M_PI * (1.0/4.0 * 1.0/25.0));
       (*iter)->Draw(image_);
     }
     
