@@ -18,7 +18,6 @@ namespace {
       const int sy = start.GetY();
       const int ex = end.GetX();
       const int ey = end.GetY();
-      float m;
       int x_max;
 
       vertical = (ex - sx) == 0;
@@ -38,9 +37,7 @@ namespace {
 
       if (!vertical) {
         // the x_max - x_min difference decides the sign of the slope
-        m = static_cast<float>(y_max - y_min) / (x_max - x_min);
-
-        inv_m = 1.0f / m;
+        inv_m =  (x_max - x_min) / static_cast<float>(y_max - y_min);
       }
     }
   };
@@ -109,6 +106,7 @@ namespace Graphics2D {
     std::pair<table_type::iterator, table_type::iterator> results;
     end = edge_table.end();
     
+    // the point to draw for lines
     PrimitivePoint point(GetColor());
     while (!edge_table.empty() || !active_edge_table.empty()) {
       // add lines starting here
@@ -116,10 +114,11 @@ namespace Graphics2D {
       for (iter = results.first; iter != results.second; ++iter) {
         active_edge_table.push_back(iter->second);
       }
+      
       // remove them from the edge table
       edge_table.erase(results.first, results.second);
       
-      // TODO: sorted insert with a total n^2 complexity instead of n^3 by sorting each step
+      // sort active edge table
       active_edge_table.sort(::sort_x);
       
       // for each active line, go through the sorted intersections, counting parity
@@ -146,14 +145,15 @@ namespace Graphics2D {
         // remove element if it is leaving the interesting area, otherwise update x
         if (aet_iter->y_max == y) {
           aet_iter = active_edge_table.erase(aet_iter);
-          continue;
-        } else if (!aet_iter->vertical) {
-          // update line position
-          aet_iter->x_min += aet_iter->inv_m;
-        }
+        } else {
+          // update line position if the line is not vertical
+          if (!aet_iter->vertical) {
+            aet_iter->x_min += aet_iter->inv_m;
+          }
         
-        // increment iterator if we didn't remove an element
-        ++aet_iter;
+          // increment iterator if we didn't remove an element
+          ++aet_iter;
+        }
       }
       
       // continue with next line
