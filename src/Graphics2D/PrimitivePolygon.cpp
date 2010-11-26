@@ -68,14 +68,14 @@ namespace Graphics2D {
   
   void PrimitivePolygon::Draw(ImageBase *im) {
     // Draw the line strip from start to the last point
-    for (int i = 0; i < coordinates_.size() - 1; i++) {
+    /*for (int i = 0; i < coordinates_.size() - 1; i++) {
       PrimitiveLine line(GetColor(), coordinates_[i], coordinates_[i + 1]);
       line.Draw(im);
     }
     
     // Draw another line from end to start
     PrimitiveLine line(GetColor(), coordinates_[coordinates_.size() - 1], coordinates_[0]);
-    line.Draw(im);
+    line.Draw(im);*/
     
     // Fill polygon
     ScanlineFill(im);
