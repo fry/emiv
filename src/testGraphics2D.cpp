@@ -14,13 +14,14 @@
 using namespace Graphics2D;
 
 int main(int argc, char** argv) {
-  if (argc != 2) {
+  if (argc > 2) {
     std::cout << "usage: " << argv[0] << " background.ppm" << std::endl;
     return 0;
   }
   
   Image image;
-  image.LoadPPM(argv[1]);
+  if (argc >= 2)
+    image.LoadPPM(argv[1]);
   
   Image image_surface;
   image_surface.Init(image.GetWidth(), image.GetHeight());
@@ -33,5 +34,13 @@ int main(int argc, char** argv) {
   c2d.RegisterPainter(&painter);
 
   c2d.Start();
+  
+  /*std::vector<Coordinate> coords;
+  coords.push_back(Coordinate(10, 10));
+  coords.push_back(Coordinate(50, 30));
+  coords.push_back(Coordinate(20, 50));
+  PrimitivePolygon p(Color::black(), coords);
+  p.Draw(&image);*/
+  
   return 0;
 }

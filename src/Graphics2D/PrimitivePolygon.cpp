@@ -1,10 +1,51 @@
 #include <Graphics2D/PrimitivePolygon.hh>
 #include <Graphics2D/PrimitiveLine.hh>
+#include <Graphics2D/PrimitivePoint.hh>
+
+#include <Graphics2DBase/Coordinate.hh>
+
+#include <map>
+#include <list>
 
 namespace {
   struct line_data {
-    float x_min, y_min, x_max, y_max, m;
+    int y_min, y_max;
+    float x_min, inv_m;
+    bool vertical;
+    
+    line_data(const Graphics2D::Coordinate& start, const Graphics2D::Coordinate& end) {
+      const int sx = start.GetX();
+      const int sy = start.GetY();
+      const int ex = end.GetX();
+      const int ey = end.GetY();
+      float m;
+      int x_max;
+
+      vertical = (ex - sx) == 0;
+
+      // Find smallest y position
+      if (sy < ey) {
+        y_min = sy;
+        y_max = ey;
+        x_min = sx;
+        x_max = ex;
+      } else {
+        y_min = ey;
+        y_max = sy;
+        x_min = ex;
+        x_max = sx;
+      }
+      
+      // the x_max - x_min difference decides the sign of the slope
+      m = static_cast<float>(y_max - y_min) / (x_max - x_min);
+
+      inv_m = 1.0f / m;
+    }
   };
+  
+  bool sort_x(const line_data& a, const line_data& b) {
+    return a.x_min < b.x_min;
+  }
 }
 
 namespace Graphics2D {
@@ -23,19 +64,6 @@ namespace Graphics2D {
     coordinates_ = coordinates;
   }
   
-  std::vector<PrimitiveLine> PrimitivePolygon::BuildLines() {
-    std::vector<line_data> edge_table;
-    edge_table.reserve(coordinates_.size());
-
-    // Draw the line strip from start to the last point
-    for (int i = 0; i < coordinates_.size() - 1; i++) {
-      edge_table.push_back(PrimitiveLine(GetColor(), coordinates_[i], coordinates_[i + 1]));
-    }
-    
-    // Draw another line from end to start
-    edge_table.push_back(PrimitiveLine(GetColor(), coordinates_[coordinates_.size() - 1], coordinates_[0]));
-  }
-  
   void PrimitivePolygon::Draw(ImageBase *im) {
     // Draw the line strip from start to the last point
     for (int i = 0; i < coordinates_.size() - 1; i++) {
@@ -46,17 +74,79 @@ namespace Graphics2D {
     // Draw another line from end to start
     PrimitiveLine line(GetColor(), coordinates_[coordinates_.size() - 1], coordinates_[0]);
     line.Draw(im);
+    
+    ScanlineFill(im);
   }
   
-  void PrimitivePolygon::ScanlineFill() {
-    // y = mx + b
-    //  (y - b) / m = x
-    std::vector<line_data> edge_table;
-    edge_table.reserve(coordinates_.size() / 2 + 1);
-    
+  void PrimitivePolygon::ScanlineFill(ImageBase* im) {
+    //  (y - b) * 1 / m = x
+    typedef std::multimap<int, line_data> table_type;
+    typedef std::pair<int, line_data> pair_type;
+    table_type edge_table;
+
+    // Draw the line strip from start to the last point
     for (int i = 0; i < coordinates_.size() - 1; i++) {
-      PrimitiveLine line(GetColor(), coordinates_[i], coordinates_[i + 1]);
-      line.Draw(im);
+      line_data line(coordinates_[i], coordinates_[i + 1]);
+      edge_table.insert(pair_type(line.y_min, line));
+    }
+    
+    // Draw another line from end to start
+    line_data line(coordinates_[coordinates_.size() - 1], coordinates_[0]);
+    edge_table.insert(pair_type(line.y_min, line));
+    
+    // Start at the smallest line
+    int y = edge_table.begin()->first;
+    
+    // active edge table
+    std::list<line_data> active_edge_table;
+    std::list<line_data>::iterator aet_iter, aet_end;
+    aet_end = active_edge_table.end();
+    
+    table_type::iterator iter, end;
+    std::pair<table_type::iterator, table_type::iterator> results;
+    end = edge_table.end();
+    
+    PrimitivePoint point(GetColor());
+    while (!edge_table.empty() || !active_edge_table.empty()) {
+      // add lines starting here
+      results = edge_table.equal_range(y);
+      for (iter = results.first; iter != results.second; ++iter) {
+        active_edge_table.push_back(iter->second);
+      }
+      // remove them from the edge table
+      edge_table.erase(results.first, results.second);
+      
+      // TODO: sorted insert with a total n^2 complexity instead of n^3 by sorting each step
+      active_edge_table.sort(::sort_x);
+      
+      // for each active line, go through the sorted intersections, counting parity
+      int parity = 0;
+      int last_x = 0;
+      for (aet_iter = active_edge_table.begin(); aet_iter != aet_end; ) {
+        int intersect_x = (int)aet_iter->x_min;
+        if (parity % 2 != 0) {
+          for (int x = last_x; x < intersect_x; x++) {
+            point.SetCoordinate(Coordinate(x, y));
+            point.Draw(im);
+          }
+        } else {
+          last_x = intersect_x;
+        }
+        
+        parity ++;
+        
+        // remove element if it is leaving the interesting area, otherwise update x
+        if (aet_iter->y_max == y) {
+          aet_iter = active_edge_table.erase(aet_iter);
+          continue;
+        } else if (!aet_iter->vertical)
+          aet_iter->x_min += aet_iter->inv_m;
+        
+        // increment iterator
+        ++aet_iter;
+      }
+      
+      y ++;
     }
   }
 }

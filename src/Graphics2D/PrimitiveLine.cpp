@@ -13,12 +13,6 @@ namespace Graphics2D {
       m = (end.GetY() - start.GetY()) / dx;
   }
   
-  int PrimitiveLine::IntersectPoint(int y) {
-    if (m == 0)
-      return y;
-    return (y - coordinates_[0].GetY()) / m;
-  }
-  
   void PrimitiveLine::Draw(ImageBase* im) {
     Coordinate start = GetCoordinates()[0];
     Coordinate end = GetCoordinates()[1];

@@ -17,8 +17,7 @@ namespace Graphics2D {
     
     void Draw(ImageBase* im);
   protected:
-    
-    std::vector<PrimitiveLine> BuildLines(); 
+    void ScanlineFill(ImageBase* im);
   };
 }
 

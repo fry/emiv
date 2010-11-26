@@ -6,6 +6,7 @@
 namespace Graphics2D {
   class PrimitivePoint: public PrimitiveBase {
   public:
+    PrimitivePoint(const Color& color);
     PrimitivePoint(const Color& color, const Coordinate& coordinate);
     
     inline const Coordinate& GetCoordinate() const {
