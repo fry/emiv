@@ -203,6 +203,11 @@ namespace Graphics2D {
         ColorConversion::ToHSV(specified_background_, copy);
         ColorConversion::ToRGB(copy, background_);
         break;
+      case ' ':
+        std::cout << static_cast<int>(image_->GetPixel(x, y, 0)) << ", "
+                  << static_cast<int>(image_->GetPixel(x, y, 1)) << ", "
+                  << static_cast<int>(image_->GetPixel(x, y, 2)) << std::endl;
+        break;
       case 'h':
         std::cout << "Help" << std::endl
                   << "Shapes: p Point, l Line, b Box, o Polygon, s Star" << std::endl
