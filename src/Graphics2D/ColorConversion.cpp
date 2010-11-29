@@ -107,7 +107,7 @@ void ColorConversion::ToRGB(const Image& src, Image& dst) {
       switch(hi) {
       case 0:
       case 6:
-        r = v; g = t; g = p;
+        r = v; g = t; b = p;
         break;
       case 1:
         r = q; g = v; b = p;
