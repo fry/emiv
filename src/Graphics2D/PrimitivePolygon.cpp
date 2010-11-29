@@ -6,6 +6,7 @@
 
 #include <map>
 #include <list>
+#include <cmath>
 
 namespace {
   struct line_data {

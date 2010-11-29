@@ -4,12 +4,15 @@
 #include <Graphics2D/PrimitiveBox.hh>
 #include <Graphics2D/PrimitivePolygon.hh>
 #include <Graphics2D/PrimitiveStar.hh>
+#include <Graphics2D/ColorConversion.hh>
 
 #include <cmath>
 
 namespace Graphics2D {
-  Painter::Painter(ImageBase* background) {
-    background_ = background;
+  Painter::Painter(Image& background): specified_background_(background) {    
+    // Copy background
+    ImageBase* my_bg = &background_;
+    *my_bg = background;
   }
   
   Painter::~Painter() {
@@ -81,10 +84,7 @@ namespace Graphics2D {
   
   void Painter::Draw() {
     // Clear the image
-    if (background_ == NULL)
-      image_->FillZero();
-    else
-      *image_ = *background_;
+    *image_ = background_;
     
     // Iterate through contained primitives and draw them
     std::vector<PrimitiveBase*>::iterator iter, end;
@@ -161,6 +161,7 @@ namespace Graphics2D {
   }
 
   void Painter::KeyPressed(unsigned char ch, int x, int y) {
+    Image copy;
     switch(ch) {
       case 'p':
         primitive_string_ = "Point";
@@ -189,10 +190,24 @@ namespace Graphics2D {
       case '4':
         color_string_ = "Blue";
         break;
+      case 'c':
+        if (background_.GetColorModel() == ImageBase::cm_RGB)
+          ColorConversion::ToGrey(specified_background_, background_);
+        else if (background_.GetColorModel() == ImageBase::cm_Grey) {
+          background_ = specified_background_;
+          background_.SetColorModel(ImageBase::cm_RGB);
+        }
+        break;
+      case 'x':
+        copy = specified_background_;
+        ColorConversion::ToHSV(specified_background_, copy);
+        ColorConversion::ToRGB(copy, background_);
+        break;
       case 'h':
         std::cout << "Help" << std::endl
                   << "Shapes: p Point, l Line, b Box, o Polygon, s Star" << std::endl
-                  << "Colors: 1 White, 2 Red, 3 Green, 4 Blue" << std::endl;
+                  << "Colors: 1 White, 2 Red, 3 Green, 4 Blue" << std::endl
+                  << "Grey: C" << std::endl;
         break;
       default:
         break;

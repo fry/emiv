@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
   Canvas2D c2d;
   c2d.Init(100, 100, image.GetWidth(), image.GetHeight());
   
-  Painter painter(&image);
+  Painter painter(image);
   c2d.RegisterImage(&image_surface);
   c2d.RegisterPainter(&painter);
 
