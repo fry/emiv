@@ -6,11 +6,12 @@
 #include <Graphics2DBase/PrimitiveBase.hh>
 #include <Graphics2DBase/PainterBase.hh>
 #include <Graphics2D/Image.hh>
+#include <Graphics2D/Histogram.hh>
 
 namespace Graphics2D {
   class Painter: public PainterBase {
     public:
-      Painter(Image& background);
+      Painter(ImageBase* background);
       virtual ~Painter();
       
       // Add a primitive to this Painter, takes ownership of the pointer
@@ -31,12 +32,16 @@ namespace Graphics2D {
     protected:
       Color GetColor();
       PrimitiveBase* GetCurrentPrimitive(int x, int y);
+      void UpdateHistogram();
       
       // The background image specified by the user
-      Image& specified_background_;
+      ImageBase* specified_background_;
       
       // The background image to use
       Image background_;
+      
+      // The histogram of the background image
+      Histogram hist[3];
       
       // The ghost primitive shown when drawing a primitive
       std::auto_ptr<PrimitiveBase> temporary_primitive_;

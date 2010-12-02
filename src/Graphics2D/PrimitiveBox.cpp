@@ -1,6 +1,15 @@
 #include <Graphics2D/PrimitiveBox.hh>
 
 namespace Graphics2D {
+  PrimitiveBox::PrimitiveBox(const Color& color, const Coordinate& a, const Coordinate& b): PrimitivePolygon(color) {
+    std::vector<Coordinate> points;
+    points.reserve(2);
+    points.push_back(a);
+    points.push_back(b);
+    SetCoordinates(points);
+    name_ = "Box";
+  }
+  
   PrimitiveBox::PrimitiveBox(const Color& color, const std::vector<Coordinate>& points): PrimitivePolygon(color) {
     SetCoordinates(points);
     name_="Box";

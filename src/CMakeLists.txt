@@ -18,7 +18,7 @@ SET(LIBRARY_OUTPUT_PATH "${EMultInf_BINARY_DIR}/lib" CACHE PATH "This is where t
 SET(EXECUTABLE_OUTPUT_PATH "${EMultInf_BINARY_DIR}/bin" CACHE PATH "This is where the binaries go.")
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${EMultInf_BINARY_DIR}/bin" CACHE PATH "This is where runtime DLLs go.")
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -g")
 
 # build shared or static libraries (never can build both) ?
 OPTION(BUILD_SHARED_LIBS "Build EMultInf with shared libraries." ON)

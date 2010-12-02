@@ -9,10 +9,11 @@
 #include <cmath>
 
 namespace Graphics2D {
-  Painter::Painter(Image& background): specified_background_(background) {    
+  Painter::Painter(ImageBase* background): specified_background_(background) {    
     // Copy background
     ImageBase* my_bg = &background_;
-    *my_bg = background;
+    *my_bg = *background;
+    UpdateHistogram();
   }
   
   Painter::~Painter() {
@@ -161,7 +162,10 @@ namespace Graphics2D {
   }
 
   void Painter::KeyPressed(unsigned char ch, int x, int y) {
-    Image copy;
+    Image* bg_img = dynamic_cast<Image*>(specified_background_);
+    if (bg_img == 0)
+      return;
+
     switch(ch) {
       case 'p':
         primitive_string_ = "Point";
@@ -191,17 +195,28 @@ namespace Graphics2D {
         color_string_ = "Blue";
         break;
       case 'c':
-        if (background_.GetColorModel() == ImageBase::cm_RGB)
-          ColorConversion::ToGrey(specified_background_, background_);
-        else if (background_.GetColorModel() == ImageBase::cm_Grey) {
-          background_ = specified_background_;
+        if (background_.GetColorModel() == ImageBase::cm_RGB) {
+          ColorConversion::ToGrey(*bg_img, background_);
+          UpdateHistogram();
+        } else if (background_.GetColorModel() == ImageBase::cm_Grey) {
+          background_ = *bg_img;
           background_.SetColorModel(ImageBase::cm_RGB);
+          UpdateHistogram();
         }
         break;
       case 'x':
-        copy = specified_background_;
-        ColorConversion::ToHSV(specified_background_, copy);
-        ColorConversion::ToRGB(copy, background_);
+        ColorConversion::ToHSV(*bg_img, background_);
+        ColorConversion::ToRGB(background_, background_);
+        UpdateHistogram();
+        break;
+      case 'k':
+        ColorConversion::ToHSV(*bg_img, background_);
+        UpdateHistogram();
+        hist[2].Autocontrast(background_, background_);
+        ColorConversion::ToRGB(background_, background_);
+        break;
+      case 'h':
+        AddPrimitive(hist)
         break;
       case ' ':
         std::cout << static_cast<int>(image_->GetPixel(x, y, 0)) << ", "
@@ -212,10 +227,16 @@ namespace Graphics2D {
         std::cout << "Help" << std::endl
                   << "Shapes: p Point, l Line, b Box, o Polygon, s Star" << std::endl
                   << "Colors: 1 White, 2 Red, 3 Green, 4 Blue" << std::endl
-                  << "Grey: C" << std::endl;
+                  << "Conversions: c Grey, x to HSV and back" << std::endl;
         break;
       default:
         break;
     }
+  }
+  
+  void Painter::UpdateHistogram() {
+    hist[0].FromImage(background_, 0);
+    hist[1].FromImage(background_, 1);
+    hist[2].FromImage(background_, 2);
   }
 }

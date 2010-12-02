@@ -8,6 +8,7 @@
 namespace Graphics2D {
   class PrimitiveBox: public PrimitivePolygon {
   public:
+    PrimitiveBox(const Color& color, const Coordinate& a, const Coordinate& b);
     PrimitiveBox(const Color& color, const std::vector<Coordinate>& points);
     
     virtual void SetCoordinates(const std::vector<Coordinate>& coordinates);
