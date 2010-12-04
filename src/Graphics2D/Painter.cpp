@@ -9,10 +9,21 @@
 #include <cmath>
 
 namespace Graphics2D {
-  Painter::Painter(ImageBase* background): specified_background_(background) {    
+  Painter::Painter(ImageBase* background): specified_background_(background),
+    hist_red_(Color::red(), Coordinate(10,10), Coordinate(800,100)),
+    hist_blue_(Color::blue(), Coordinate(10,100), Coordinate(800,100)),
+    hist_green_(Color::green(), Coordinate(10,190), Coordinate(800,100)),
+    
+    hist_hue_(Color::white(), Coordinate(10,300), Coordinate(800,100)),
+    hist_saturation_(Color::black(), Coordinate(10,390), Coordinate(800,100)),
+    hist_value_(Color::yellow(), Coordinate(10,480), Coordinate(800,100)),
+    
+    display_histogram_(false)
+  {    
     // Copy background
     ImageBase* my_bg = &background_;
     *my_bg = *background;
+    
     UpdateHistogram();
   }
   
@@ -100,6 +111,17 @@ namespace Graphics2D {
     // If a "ghost primitive" is set, draw it
     if (temporary_primitive_.get() != 0)
       temporary_primitive_->Draw(image_);
+      
+    // Draw histograms
+    if (display_histogram_) {
+      hist_red_.Draw(image_);
+      hist_green_.Draw(image_);
+      hist_blue_.Draw(image_);
+    
+      hist_hue_.Draw(image_);
+      hist_saturation_.Draw(image_);
+      hist_value_.Draw(image_);
+    }
   }
 
   std::string Painter::GetColorString() {
@@ -207,27 +229,32 @@ namespace Graphics2D {
       case 'x':
         ColorConversion::ToHSV(*bg_img, background_);
         ColorConversion::ToRGB(background_, background_);
+        
         UpdateHistogram();
         break;
       case 'k':
+        std::cout << "autocontrast" << std::endl;
         ColorConversion::ToHSV(*bg_img, background_);
-        UpdateHistogram();
-        hist[2].Autocontrast(background_, background_);
+        hist_value_.Autocontrast(background_, background_);
         ColorConversion::ToRGB(background_, background_);
-        break;
-      case 'h':
-        AddPrimitive(hist)
+        
+        UpdateHistogram();
         break;
       case ' ':
         std::cout << static_cast<int>(image_->GetPixel(x, y, 0)) << ", "
                   << static_cast<int>(image_->GetPixel(x, y, 1)) << ", "
                   << static_cast<int>(image_->GetPixel(x, y, 2)) << std::endl;
         break;
+      case 'j':
+        display_histogram_ = !display_histogram_;
+        break;
       case 'h':
         std::cout << "Help" << std::endl
                   << "Shapes: p Point, l Line, b Box, o Polygon, s Star" << std::endl
                   << "Colors: 1 White, 2 Red, 3 Green, 4 Blue" << std::endl
-                  << "Conversions: c Grey, x to HSV and back" << std::endl;
+                  << "Conversions: c Grey, x to HSV and back" << std::endl
+                  << "k Autocontrast" << std::endl
+                  << "j Show/Hide Histograms" << std::endl;
         break;
       default:
         break;
@@ -235,8 +262,17 @@ namespace Graphics2D {
   }
   
   void Painter::UpdateHistogram() {
-    hist[0].FromImage(background_, 0);
-    hist[1].FromImage(background_, 1);
-    hist[2].FromImage(background_, 2);
+    hist_red_.FromImage(background_, 0);
+    hist_blue_.FromImage(background_, 1);
+    hist_green_.FromImage(background_, 2);
+   
+    // Generate HSV image to extract histogram of
+    Image background_hsv;
+    background_hsv.Init(background_.GetWidth(), background_.GetHeight());
+    ColorConversion::ToHSV(background_, background_hsv);
+    
+    hist_hue_.FromImage(background_hsv, 0);
+    hist_saturation_.FromImage(background_hsv, 1);
+    hist_value_.FromImage(background_hsv, 2);
   }
 }

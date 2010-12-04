@@ -41,7 +41,16 @@ namespace Graphics2D {
       Image background_;
       
       // The histogram of the background image
-      Histogram hist[3];
+      Histogram hist_red_;
+      Histogram hist_green_;
+      Histogram hist_blue_;
+      
+      Histogram hist_hue_;
+      Histogram hist_saturation_;
+      Histogram hist_value_;
+      
+      // Whether to display the histogram data
+      bool display_histogram_;
       
       // The ghost primitive shown when drawing a primitive
       std::auto_ptr<PrimitiveBase> temporary_primitive_;

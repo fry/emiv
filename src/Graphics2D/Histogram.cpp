@@ -10,22 +10,23 @@ Histogram::Histogram(const Color& color, const Coordinate& pos, const Coordinate
   coords.push_back(pos);
   coords.push_back(size);
   
-  SetCoordinates(coords);
+  coordinates_ = coords;
 }
 
 void Histogram::FromImage(const Image& image, const int& channel) {
-  values.resize(256);
-  
+  memset(values, 0, 256 * 4);
   for (int x = 0; x < image.GetWidth(); x++) {
     for (int y = 0; y < image.GetHeight(); y++) {
       unsigned char value = image.GetPixel(x, y, channel);
       values[value]++;
     }
   }
+  
+  UpdateBoxes();
 }
 
 int Histogram::GetMin() {
-  for (int i = 0; i < values.size(); i++) {
+  for (int i = 0; i < 256; i++) {
     if (values[i] != 0)
       return i;
   }
@@ -34,7 +35,7 @@ int Histogram::GetMin() {
 }
 
 int Histogram::GetMax() {
-  for (int i = values.size() - 1; i >= 0; i--) {
+  for (int i = 256 - 1; i >= 0; i--) {
     if (values[i] != 0)
       return i;
   }
@@ -78,24 +79,31 @@ void Histogram::Draw(ImageBase* im) {
 void Histogram::UpdateBoxes() {
   boxes.clear();
 
+  // position is x/y
   const Coordinate& position = coordinates_[0];
+  // size is width/height
   const Coordinate& size = coordinates_[1];
   
+  // Calculate maximum value
   int max = 0;
-  for (int i = 0; i < values.size(); values++) {
+  for (int i = 0; i < 256; i++) {
     max = std::max(values[i], max);
   }
   
-  const float s = size.GetY() / log10(max + 1);
-  const float box_width = static_cast<float>(size.GetX()) / values.size();
+  // calculate max box size and width
+  const float s = (float)size.GetY() / log10(max + 1);
+  const float box_width = size.GetX() / 256.0;
   
   float current_x = position.GetX();
   const float y = position.GetY() + size.GetY();
-  boxes.reserve(values.size());
+  boxes.reserve(256);
   
-  for (int i = 0; i < values.size(); values++) {
+  for (int i = 0; i < 256; i++) {
     const float height = s * log10(values[i] + 1);
+    // Create the box with the precondition that the coordinate system origin is at the top left
     PrimitiveBox box(GetColor(), Coordinate(current_x, y), Coordinate(current_x + box_width, y - height));
     boxes.push_back(box);
+    
+    current_x += box_width;
   }
 }

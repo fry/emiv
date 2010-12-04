@@ -25,6 +25,10 @@ namespace Graphics2D {
     static Color white(){
       return Color("white",255,255,255);
     }
+    
+    static Color yellow(){
+      return Color("yellow",255,255,0);
+    }
 
     Color(const std::string& name, unsigned char r, unsigned char g, unsigned char b);
     

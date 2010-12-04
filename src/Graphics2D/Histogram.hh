@@ -21,8 +21,8 @@ namespace Graphics2D {
     void Draw(ImageBase* im);
   protected:
     void UpdateBoxes();
-    
-    std::vector<int> values;
+
+  	int values[256];	
     std::vector<PrimitiveBox> boxes;
   };
 }

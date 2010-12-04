@@ -5,6 +5,7 @@
 
 #include <Graphics2D/Image.hh>
 #include <fstream>
+#include <cstring>
 
 using namespace Graphics2D;
 
