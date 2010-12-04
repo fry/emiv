@@ -217,6 +217,7 @@ namespace Graphics2D {
         color_string_ = "Blue";
         break;
       case 'c':
+        // convert between greyscale <-> rgb
         if (background_.GetColorModel() == ImageBase::cm_RGB) {
           ColorConversion::ToGrey(*bg_img, background_);
           UpdateHistogram();
@@ -227,14 +228,15 @@ namespace Graphics2D {
         }
         break;
       case 'x':
+        // test convert to hsv and back to rgb
         ColorConversion::ToHSV(*bg_img, background_);
         ColorConversion::ToRGB(background_, background_);
         
         UpdateHistogram();
         break;
       case 'k':
-        std::cout << "autocontrast" << std::endl;
-        ColorConversion::ToHSV(*bg_img, background_);
+        // Convert the image to HSV, autocontrast the value of HSV and convert it back
+        ColorConversion::ToHSV(background_, background_);
         hist_value_.Autocontrast(background_, background_);
         ColorConversion::ToRGB(background_, background_);
         

@@ -91,13 +91,15 @@ void Histogram::UpdateBoxes() {
   }
   
   // calculate max box size and width
-  const float s = (float)size.GetY() / log10(max + 1);
+  const float s = size.GetY() / log10(max + 1);
   const float box_width = size.GetX() / 256.0;
   
-  float current_x = position.GetX();
+  // specify bottom y of the boxes
   const float y = position.GetY() + size.GetY();
   boxes.reserve(256);
   
+  float current_x = position.GetX();
+  // generate primitive boxes
   for (int i = 0; i < 256; i++) {
     const float height = s * log10(values[i] + 1);
     // Create the box with the precondition that the coordinate system origin is at the top left
