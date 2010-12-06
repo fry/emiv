@@ -39,3 +39,5 @@ add_subdirectory(Graphics2D)
 add_executable(testGraphics2D testGraphics2D.cpp)
 target_link_libraries(testGraphics2D Graphics2D)
 
+add_executable(filter filter.cpp)
+target_link_libraries(filter Graphics2D)

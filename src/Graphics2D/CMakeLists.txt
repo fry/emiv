@@ -18,5 +18,6 @@ add_library(Graphics2D
   Painter.hh
   Painter.cpp
   ColorConversion.cpp
-  Histogram.cpp)
+  Histogram.cpp
+  Filter.cpp)
 target_link_libraries(Graphics2D Graphics2DBase)
