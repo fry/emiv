@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
   std::cout << "generated src_meanA.ppm in " << diff << "ms" << std::endl;
   
   // Build seperatable mean filtered image
-  dst.FillZero();
+/*  dst.FillZero();
   gettimeofday(&t, 0);
   t_start = get_real_time(t);
   filter = Filter::CreateMean(7, 1);
@@ -66,4 +66,29 @@ int main(int argc, char** argv) {
   diff = t_end - t_start;
   dst.SavePPM("src_binom.ppm");
   std::cout << "generated src_binom.ppm in " << diff << "ms" << std::endl;
+  */
+  
+  //filter using recursive filter
+  dst.FillZero();
+  gettimeofday(&t, 0);
+  t_start = get_real_time(t);
+  Graphics2D::Filter::MeanRecursive(image,dst,7,7);
+  gettimeofday(&t, 0);
+  t_end = get_real_time(t);
+  diff = t_end - t_start;
+  dst.SavePPM("src_7x7_recursive.ppm");
+  std::cout << "generated src_7x7_recursive.ppm in " << diff << "ms" << std::endl;
+  
+  //filter using recursive filter
+  dst.FillZero();
+  gettimeofday(&t, 0);
+  t_start = get_real_time(t);
+  Filter::MeanRecursive(image,dst,31,31);
+  gettimeofday(&t, 0);
+  t_end = get_real_time(t);
+  diff = t_end - t_start;
+  dst.SavePPM("src_31x31_recursive.ppm");
+  std::cout << "generated src_31x31_recursive.ppm in " << diff << "ms" << std::endl;
+  
+  
 }

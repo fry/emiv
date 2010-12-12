@@ -44,6 +44,52 @@ void Filter::FilterImage(const Image& src, Image& dst) {
   }
 }
 
+//void recursive_helper(const Image& src, Image &dst, int width, int height)
+void Filter::MeanRecursive(const Image& src, Image &dst, int width, int height){
+	int half_width = width/2;
+	int half_height = height/2;
+	
+	Image tmp;
+	tmp.Init(src.GetWidth(), src.GetHeight());
+	
+	//for each color
+	for (int c=0; c<3; c++){
+		//run through all the rows
+		for (int pic_row=0; pic_row<src.GetHeight();pic_row++){
+			//initialize the zw_sum excluduing the last pixel
+			int zw_sum=0;
+			for (int filter=0; filter<width-1; filter++){
+				zw_sum+=src.GetPixel(filter, pic_row, c);
+			}
+			//run through all the pixels we can update (leave out the border)
+			for (int pic_col=half_width; pic_col < src.GetWidth()-half_width; pic_col++){
+				//add the last pixel
+				zw_sum+=src.GetPixel(pic_col + half_width, pic_row, c);
+				tmp.SetPixel(pic_col, pic_row, c, zw_sum/width);
+				//remove the first pixel
+				zw_sum-=src.GetPixel(pic_col - half_width, pic_row, c);
+			}
+		}
+		
+		//at the end run through all the cols and do the same thing
+		for (int pic_col=0; pic_col<src.GetWidth();pic_col++){
+			//initialize the zw_sum excluduing the last pixel
+			int col_zw_sum=0;
+			for (int filter=0; filter<height-1; filter++){
+				col_zw_sum+=tmp.GetPixel(pic_col, filter, c);
+			}
+			//run through all the pixels we can update (leave out the border)
+			for (int pic_row=half_height; pic_row < src.GetHeight()-half_height; pic_row++){
+				//add the last pixel
+				col_zw_sum+=tmp.GetPixel(pic_col, pic_row + half_height, c);
+				dst.SetPixel(pic_col, pic_row, c, col_zw_sum/width);
+				//remove the first pixel
+				col_zw_sum-=tmp.GetPixel(pic_col, pic_row - half_height, c);
+			}
+		}
+	}
+}
+
 Filter* Filter::CreateMean(int width, int height) {
   std::vector<std::vector<int> > mask(width, std::vector<int>(height, 1));
   return new Filter(mask);

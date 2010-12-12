@@ -1,6 +1,7 @@
 #include <Graphics2D/Histogram.hh>
 #include <Graphics2D/ColorConversion.hh>
 #include <cmath>
+#include <memory.h>
 
 using namespace Graphics2D;
 

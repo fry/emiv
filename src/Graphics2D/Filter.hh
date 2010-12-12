@@ -6,7 +6,7 @@ namespace Graphics2D {
   class Filter {
   public:
     void FilterImage(const Image& src, Image& dst);
-    
+    static void MeanRecursive(const Image& src, Image &dst, int width, int height);
     static Filter* CreateMean(int width, int height);
     static Filter* CreateBinomial(int width);
   protected:
