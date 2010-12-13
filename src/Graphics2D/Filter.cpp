@@ -1,4 +1,5 @@
 #include <Graphics2D/Filter.hh>
+#include <Graphics2D/ColorConversion.hh>
 
 using namespace Graphics2D;
 
@@ -9,7 +10,7 @@ namespace {
   }
 }
 
-Filter::Filter(const std::vector<std::vector<int> >& mask): mask_(mask) {
+Filter::Filter(const std::vector<std::vector<int> >& mask, int scale): mask_(mask), scale_(scale) {
   width_ = mask_.size();
   height_ = mask_[0].size();
   half_width_ = width_ / 2;
@@ -37,8 +38,11 @@ void Filter::FilterImage(const Image& src, Image& dst) {
             sum += mask_[fx][fy] * src.GetPixel(px, py, c);
           }
         }
-      
-        dst.SetPixel(x, y, c, sum / sum_mask_);
+
+        if (sum_mask_ == 0)
+          dst.SetPixel(x, y, c, (sum + scale_ * 255) / scale_);
+        else
+          dst.SetPixel(x, y, c, sum / sum_mask_);
       }
     }
   }
@@ -109,6 +113,55 @@ Filter* Filter::CreateBinomial(int width) {
       mask[x][y] = binos[x] * binos[y];
     }
   }
+  
+  return new Filter(mask);
+}
+
+void Filter::Rank3x3(const Image& src, Image& dst, int rank) {
+  assert(rank >= 0 && rank <= 6);
+  
+  Image tmp;
+  tmp.Init(src.GetWidth(), src.GetHeight());
+  ColorConversion::ToGrey(src, tmp);
+  
+  dst.SetColorModel(ImageBase::cm_Grey);
+  std::vector<int> values;
+  values.reserve(3 * 3 + 1);
+
+  for (int x = 1; x < src.GetWidth() - 1; x++) {
+    for (int y = 1; y < src.GetHeight() - 1; y++) {
+      for (int fx = -1; fx <= 1; fx++) {
+        for (int fy = -1; fy <= 1; fy++) {
+          values.push_back(tmp.GetPixel(x + fx, y + fy, 0));
+        }
+      }
+      
+      std::sort(values.begin(), values.end());
+      
+      const int current_value = tmp.GetPixel(x, y, 0);
+      //const int new_value = values[rank] < current_value ? 255 : 0;
+      const int new_value = values[rank];
+      dst.SetPixel(x, y, 0, new_value);
+      dst.SetPixel(x, y, 1, new_value);
+      dst.SetPixel(x, y, 2, new_value);
+      
+      values.clear();
+    }
+  }
+}
+
+Filter* Filter::CreateGradX() {
+  std::vector<std::vector<int> > mask(3, std::vector<int>(1, 0));
+  mask[0][0] = -1;
+  mask[0][2] = 1;
+  
+  return new Filter(mask);
+}
+
+Filter* Filter::CreateGradY() {
+  std::vector<std::vector<int> > mask(1, std::vector<int>(3, 0));
+  mask[0][0] = -1;
+  mask[2][0] = 1;
   
   return new Filter(mask);
 }

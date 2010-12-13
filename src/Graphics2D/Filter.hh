@@ -9,11 +9,16 @@ namespace Graphics2D {
     static void MeanRecursive(const Image& src, Image &dst, int width, int height);
     static Filter* CreateMean(int width, int height);
     static Filter* CreateBinomial(int width);
+    static Filter* CreateGradX();
+    static Filter* CreateGradY();
+    static Filter* CreateGradLaplace();
+    
+    static void Rank3x3(const Image& src, Image& dst, int rank = 3);
   protected:
-    Filter(const std::vector<std::vector<int> >& mask);
+    Filter(const std::vector<std::vector<int> >& mask, int scale = 1);
     
     std::vector<std::vector<int> > mask_;
     
-    int width_, height_, sum_mask_, half_width_, half_height_;
+    int width_, height_, sum_mask_, half_width_, half_height_, scale_;
   };
 }
