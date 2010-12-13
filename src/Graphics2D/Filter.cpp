@@ -153,7 +153,7 @@ void Filter::Rank3x3(const Image& src, Image& dst, int rank) {
 Filter* Filter::CreateGradX() {
   std::vector<std::vector<int> > mask(3, std::vector<int>(1, 0));
   mask[0][0] = -1;
-  mask[0][2] = 1;
+  mask[2][0] = 1;
   
   return new Filter(mask);
 }
@@ -161,7 +161,7 @@ Filter* Filter::CreateGradX() {
 Filter* Filter::CreateGradY() {
   std::vector<std::vector<int> > mask(1, std::vector<int>(3, 0));
   mask[0][0] = -1;
-  mask[2][0] = 1;
+  mask[0][2] = 1;
   
   return new Filter(mask);
 }
