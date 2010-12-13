@@ -11,8 +11,9 @@ namespace Graphics2D {
     static Filter* CreateBinomial(int width);
     static Filter* CreateGradX();
     static Filter* CreateGradY();
-    static Filter* CreateGradLaplace();
+    static Filter* CreateLaplace();
     
+    static void FilterGradMag(const Image& src, Image& dst);
     static void Rank3x3(const Image& src, Image& dst, int rank = 3);
   protected:
     Filter(const std::vector<std::vector<int> >& mask, int scale = 1);

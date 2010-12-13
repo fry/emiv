@@ -40,7 +40,7 @@ void Filter::FilterImage(const Image& src, Image& dst) {
         }
 
         if (sum_mask_ == 0)
-          dst.SetPixel(x, y, c, (sum + scale_ * 255) / scale_);
+          dst.SetPixel(x, y, c, (sum + scale_ / 2 * 255) / scale_);
         else
           dst.SetPixel(x, y, c, sum / sum_mask_);
       }
@@ -155,7 +155,7 @@ Filter* Filter::CreateGradX() {
   mask[0][0] = -1;
   mask[2][0] = 1;
   
-  return new Filter(mask);
+  return new Filter(mask, 2);
 }
 
 Filter* Filter::CreateGradY() {
@@ -163,5 +163,32 @@ Filter* Filter::CreateGradY() {
   mask[0][0] = -1;
   mask[0][2] = 1;
   
-  return new Filter(mask);
+  return new Filter(mask, 2);
+}
+
+Filter* Filter::CreateLaplace() {
+  std::vector<std::vector<int> > mask(3, std::vector<int>(3, 0));
+  mask[1][0] = -1;
+  mask[0][1] = -1;
+  mask[2][1] = -1;
+  mask[1][2] = -1;
+  mask[1][1] = 4;
+  
+  return new Filter(mask, 4);
+}
+
+void Filter::FilterGradMag(const Image& src, Image& dst) {
+  for (int x = 1; x < src.GetWidth() - 1; x++) {
+    for (int y = 1; y < src.GetHeight() - 1; y++) {
+      for (int c = 0; c < 3; c ++) {
+        int sum = 0;
+        // x grad
+        sum += -src.GetPixel(x - 1, y, c) + src.GetPixel(x + 1, y, c);
+        // y grad      
+        sum += -src.GetPixel(x, y - 1, c) + src.GetPixel(x, y + 1, c);
+        
+        dst.SetPixel(x, y, c, std::abs(sum) / 2);
+      }
+    }
+  }
 }
