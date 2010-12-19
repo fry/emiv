@@ -1,6 +1,8 @@
 #include <Graphics2D/Filter.hh>
 #include <Graphics2D/ColorConversion.hh>
 
+#include <cmath>
+
 using namespace Graphics2D;
 
 namespace {
@@ -39,6 +41,8 @@ void Filter::FilterImage(const Image& src, Image& dst) {
           }
         }
 
+        // If the filter sum is zero, use passed scale factor to convert from
+        // -scale/2 * 255 .. +scale/2 * 255 to 0 .. 255
         if (sum_mask_ == 0)
           dst.SetPixel(x, y, c, (sum + scale_ / 2 * 255) / scale_);
         else
@@ -120,26 +124,31 @@ Filter* Filter::CreateBinomial(int width) {
 void Filter::Rank3x3(const Image& src, Image& dst, int rank) {
   assert(rank >= 0 && rank <= 6);
   
+  // Initialise temporary image to store grayscale version of the source image
   Image tmp;
   tmp.Init(src.GetWidth(), src.GetHeight());
   ColorConversion::ToGrey(src, tmp);
   
   dst.SetColorModel(ImageBase::cm_Grey);
+  
+  // Place to store color values
   std::vector<int> values;
   values.reserve(3 * 3 + 1);
 
   for (int x = 1; x < src.GetWidth() - 1; x++) {
     for (int y = 1; y < src.GetHeight() - 1; y++) {
+      // Read a 1 pixel environment
       for (int fx = -1; fx <= 1; fx++) {
         for (int fy = -1; fy <= 1; fy++) {
           values.push_back(tmp.GetPixel(x + fx, y + fy, 0));
         }
       }
       
+      // Sort the values
       std::sort(values.begin(), values.end());
       
+      // From the sorted list, use the pixel at the specified rank as output
       const int current_value = tmp.GetPixel(x, y, 0);
-      //const int new_value = values[rank] < current_value ? 255 : 0;
       const int new_value = values[rank];
       dst.SetPixel(x, y, 0, new_value);
       dst.SetPixel(x, y, 1, new_value);
@@ -151,6 +160,9 @@ void Filter::Rank3x3(const Image& src, Image& dst, int rank) {
 }
 
 Filter* Filter::CreateGradX() {
+  //  0  0  0
+  // -1  0  1
+  //  0  0  0
   std::vector<std::vector<int> > mask(3, std::vector<int>(1, 0));
   mask[0][0] = -1;
   mask[2][0] = 1;
@@ -159,6 +171,9 @@ Filter* Filter::CreateGradX() {
 }
 
 Filter* Filter::CreateGradY() {
+  // 0 -1  0
+  // 0  0  0
+  // 0  1  0
   std::vector<std::vector<int> > mask(1, std::vector<int>(3, 0));
   mask[0][0] = -1;
   mask[0][2] = 1;
@@ -167,6 +182,9 @@ Filter* Filter::CreateGradY() {
 }
 
 Filter* Filter::CreateLaplace() {
+  //  0 -1  0
+  // -1  4 -1
+  //  0 -1  0
   std::vector<std::vector<int> > mask(3, std::vector<int>(3, 0));
   mask[1][0] = -1;
   mask[0][1] = -1;
@@ -178,16 +196,24 @@ Filter* Filter::CreateLaplace() {
 }
 
 void Filter::FilterGradMag(const Image& src, Image& dst) {
+  // Filter an image by applying both gradient filters and
+  // scaling the resulting magnitude of the vector down to
+  // 0..255 again
+  
+  // Calculate the proper scaling factor for the euclidian metric
+  const float mag_factor = 255.0 / std::sqrt(255*255 + 255*255);
+  
   for (int x = 1; x < src.GetWidth() - 1; x++) {
     for (int y = 1; y < src.GetHeight() - 1; y++) {
       for (int c = 0; c < 3; c ++) {
-        int sum = 0;
         // x grad
-        sum += -src.GetPixel(x - 1, y, c) + src.GetPixel(x + 1, y, c);
+        const int dx = -src.GetPixel(x - 1, y, c) + src.GetPixel(x + 1, y, c);
         // y grad      
-        sum += -src.GetPixel(x, y - 1, c) + src.GetPixel(x, y + 1, c);
+        const int dy = -src.GetPixel(x, y - 1, c) + src.GetPixel(x, y + 1, c);
         
-        dst.SetPixel(x, y, c, std::abs(sum) / 2);
+        // scale down magnitude
+        const int mag_real = rint(std::sqrt(dx*dx + dy*dy) * mag_factor);
+        dst.SetPixel(x, y, c, mag_real);
       }
     }
   }
