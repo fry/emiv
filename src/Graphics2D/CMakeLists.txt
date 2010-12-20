@@ -17,7 +17,12 @@ add_library(Graphics2D
   PrimitiveStar.cpp
   Painter.hh
   Painter.cpp
+  ColorConversion.hh
   ColorConversion.cpp
+  Histogram.hh
   Histogram.cpp
-  Filter.cpp)
+  Filter.hh
+  Filter.cpp
+  Segmentation.hh
+  Segmentation.cpp)
 target_link_libraries(Graphics2D Graphics2DBase)

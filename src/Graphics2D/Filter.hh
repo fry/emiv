@@ -1,3 +1,6 @@
+#ifndef FILTER_HH_
+#define FILTER_HH_
+
 #include <Graphics2D/Image.hh>
 
 #include <vector>
@@ -23,3 +26,5 @@ namespace Graphics2D {
     int width_, height_, sum_mask_, half_width_, half_height_, scale_;
   };
 }
+
+#endif

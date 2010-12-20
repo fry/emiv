@@ -122,7 +122,7 @@ Filter* Filter::CreateBinomial(int width) {
 }
 
 void Filter::Rank3x3(const Image& src, Image& dst, int rank) {
-  assert(rank >= 0 && rank <= 6);
+  assert(rank >= 0 && rank < 3*3+1);
   
   // Initialise temporary image to store grayscale version of the source image
   Image tmp;

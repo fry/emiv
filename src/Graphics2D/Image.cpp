@@ -69,6 +69,8 @@ int Image::LoadPPM(const std::string &filename) {
   
   file.close();
   
+  SetColorModel(ImageBase::cm_RGB);
+  
   return 0;
 }
 

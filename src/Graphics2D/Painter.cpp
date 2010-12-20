@@ -230,7 +230,7 @@ namespace Graphics2D {
       case 'x':
         // test convert to hsv and back to rgb
         ColorConversion::ToHSV(*bg_img, background_);
-        ColorConversion::ToRGB(background_, background_);
+        //ColorConversion::ToRGB(background_, background_);
         
         UpdateHistogram();
         break;
