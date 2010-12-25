@@ -54,8 +54,9 @@ int main(int argc, char** argv) {
   std::cout << "start " << point.GetX() << "," << point.GetY() << std::endl;
   std::vector<int> freeman_code;
   seg.GetFreemanCode(80, point, freeman_code);
+  std::cout << label.GetWidth() << "," << label.GetHeight() << std::endl;
   seg.DrawContourFreeman(point, freeman_code, Color::red(), label);
-  
+
   label.SavePPM("out_label.ppm");
   std::cout << "saved out_label.ppm" << std::endl;
     

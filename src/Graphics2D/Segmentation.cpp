@@ -5,7 +5,12 @@
 using namespace Graphics2D;
 
 namespace {
+  inline int fmc(int fm) {
+    return (fm + 8) % 8;
+  }
+  
   void get_fm(int code, int& dx, int& dy) {
+    code = fmc(code);
     dx = 0; dy = 0;
     switch(code) {
       case 0:
@@ -103,44 +108,51 @@ int Segmentation::GetCenterAndArea(const int label, Coordinate &center, int &are
   center *= 1.0f / area;
 }
 
-int Segmentation::GetFreemanCode(const int label, Coordinate &firstPoint, std::vector<int> &freemanCode) {
+int Segmentation::GetFreemanCode(const int label, const Coordinate &firstPoint, std::vector<int> &freemanCode) {
   int cx = firstPoint.GetX();
   int cy = firstPoint.GetY();
   
   const int width = labelImage_.GetWidth();
   const int height = labelImage_.GetHeight();
   
+  const Color color = Color::red();
+  
   int cb = 6;
   while (true) {
     int ck, dx, dy;
+    bool found = false;
     for (ck = cb - 1; ck <= cb + 1; ck++) {
       get_fm(ck, dx, dy);
       const int px = cx + dx;
       const int py = cy + dy;
       if (px >= 0 && py >= 0 && px <= width && py <= height) {
-        std::cout << px << "," << py << std::endl;
         if (labelImage_.GetPixel(px, py, 0) == label) {
           cx = px; cy = py;
+          found = true;
           break;
         }
       }
     }
     
-    freemanCode.push_back(ck);
-    if (cx == firstPoint.GetX() && cy == firstPoint.GetY())
-      break;
-
-    if (ck == cb - 1) {
+    ck = fmc(ck);
+    
+    if (ck == cb || ck == fmc(cb + 1)) {
+      freemanCode.push_back(ck);
+    } else if (ck == fmc(cb - 1)) {
       cb -= 2;
-    } else if (ck == cb + 1) {
+      freemanCode.push_back(ck);
+    } else {
       cb += 2;
     }
     
     cb = ((cb + 8) % 8);
+    
+    if (cx == firstPoint.GetX() && cy == firstPoint.GetY())
+      break;
   }
 }
 
-void Segmentation::DrawContourFreeman(const Coordinate firstPoint, const std::vector<int> &freemanCode, 
+void Segmentation::DrawContourFreeman(const Coordinate& firstPoint, const std::vector<int> &freemanCode, 
     const Color color, Image &targetImage) {
   int cx = firstPoint.GetX();
   int cy = firstPoint.GetY();
@@ -148,10 +160,14 @@ void Segmentation::DrawContourFreeman(const Coordinate firstPoint, const std::ve
   std::vector<int>::const_iterator iter, end;
   end = freemanCode.end();
   
+  int i = 0;
   for (iter = freemanCode.begin(); iter != end; ++iter) {
     int dx, dy;
     get_fm(*iter, dx, dy);
     cx += dx; cy += dy;
+    
+    if (cx < 0 || cy < 0)
+      break;
     
     targetImage.SetPixel(cx, cy, 0, color.GetRed());
     targetImage.SetPixel(cx, cy, 1, color.GetGreen());

@@ -80,7 +80,7 @@ namespace Graphics2D {
        * @param freemanCode result vector containing freeman code
        * @return 0 on success, 1 if no such label exists
        */
-      int GetFreemanCode(const int label, Coordinate &firstPoint, std::vector<int> &freemanCode);
+      int GetFreemanCode(const int label, const Coordinate &firstPoint, std::vector<int> &freemanCode);
       
       /**
        * starting at coordinate firstpoint, freeman code is unrolled to actual pixel coordinates and drawn
@@ -90,7 +90,7 @@ namespace Graphics2D {
        * @param color color to draw the contour in
        * @param targetImage where to draw the contour
        */
-      void DrawContourFreeman(const Coordinate firstPoint, const std::vector<int> &freemanCode, 
+      void DrawContourFreeman(const Coordinate& firstPoint, const std::vector<int> &freemanCode, 
           const Color color, Image &targetImage);
       
       /*
