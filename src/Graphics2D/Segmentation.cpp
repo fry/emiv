@@ -117,18 +117,21 @@ int Segmentation::GetFreemanCode(const int label, const Coordinate &firstPoint, 
   
   const Color color = Color::red();
   
+  // initial direction is south
   int cb = 6;
   while (true) {
     int ck, dx, dy;
-    bool found = false;
+    // test pixels from right to left in the general direction
     for (ck = cb - 1; ck <= cb + 1; ck++) {
+      // translate freeman code to direction and apply it
       get_fm(ck, dx, dy);
       const int px = cx + dx;
       const int py = cy + dy;
+      // ensure bounds
       if (px >= 0 && py >= 0 && px <= width && py <= height) {
+        // if a pixel matches the label, move to that pixel and abort
         if (labelImage_.GetPixel(px, py, 0) == label) {
           cx = px; cy = py;
-          found = true;
           break;
         }
       }
@@ -137,16 +140,20 @@ int Segmentation::GetFreemanCode(const int label, const Coordinate &firstPoint, 
     ck = fmc(ck);
     
     if (ck == cb || ck == fmc(cb + 1)) {
+      // matched pixel is forward or right, nothing needs to change
       freemanCode.push_back(ck);
     } else if (ck == fmc(cb - 1)) {
+      // pixel is left, turn left in addition to marking this pixel
       cb -= 2;
       freemanCode.push_back(ck);
     } else {
+      // no pixel found, turn right
       cb += 2;
     }
     
     cb = ((cb + 8) % 8);
     
+    // abort if we reached the start
     if (cx == firstPoint.GetX() && cy == firstPoint.GetY())
       break;
   }
@@ -166,11 +173,19 @@ void Segmentation::DrawContourFreeman(const Coordinate& firstPoint, const std::v
     get_fm(*iter, dx, dy);
     cx += dx; cy += dy;
     
-    if (cx < 0 || cy < 0)
-      break;
-    
     targetImage.SetPixel(cx, cy, 0, color.GetRed());
     targetImage.SetPixel(cx, cy, 1, color.GetGreen());
     targetImage.SetPixel(cx, cy, 2, color.GetBlue());
+  }
+}
+
+Coordinate Segmentation::GetLabelTopLeft(int label) {
+  for (int y = 0; y < labelImage_.GetHeight(); y ++) {
+    for (int x = 0; x < labelImage_.GetWidth(); x ++) {
+      const int px = labelImage_.GetPixel(x, y, 0);
+      if (px == label) {
+        return Coordinate(x, y);
+      }
+    }
   }
 }

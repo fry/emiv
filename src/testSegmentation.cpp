@@ -10,17 +10,6 @@ void print_area_center(Segmentation seg, const std::string& name, int label) {
   std::cout << name << " is located at " << center.GetX() << ", " << center.GetY() << " with area " << area << std::endl;
 }
 
-Coordinate get_topleft(Image& img, int label) {
-  for (int y = 0; y < img.GetHeight(); y ++) {
-    for (int x = 0; x < img.GetWidth(); x ++) {
-      const int px = img.GetPixel(x, y, 0);
-      if (px == label) {
-        return Coordinate(x, y);
-      }
-    }
-  }
-}
-
 int main(int argc, char** argv) {
   if (argc > 2) {
     std::cout << "usage: " << argv[0] << " background.ppm" << std::endl;
@@ -50,11 +39,10 @@ int main(int argc, char** argv) {
   print_area_center(seg, "Tree", 80);
   print_area_center(seg, "Present", 240);
   
-  Coordinate point(get_topleft(label, 80));
-  std::cout << "start " << point.GetX() << "," << point.GetY() << std::endl;
+  const int mark_label = 80;
+  Coordinate point(seg.GetLabelTopLeft(mark_label));
   std::vector<int> freeman_code;
-  seg.GetFreemanCode(80, point, freeman_code);
-  std::cout << label.GetWidth() << "," << label.GetHeight() << std::endl;
+  seg.GetFreemanCode(mark_label, point, freeman_code);
   seg.DrawContourFreeman(point, freeman_code, Color::red(), label);
 
   label.SavePPM("out_label.ppm");

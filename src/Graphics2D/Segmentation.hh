@@ -98,6 +98,14 @@ namespace Graphics2D {
        * Consider making functions private if you intent to use them only internally. 
        */
       
+      /**
+       * finds the first pixel of this label encountered when scanning lines
+       * from top left to bottom right. Precondition is the existance of such
+       * a pixel.
+       * @return the pixel coordinate of the most top left pixel in the
+       *         specified segment
+       */
+      Coordinate GetLabelTopLeft(int label);
     private:
 
       /// store hsv representation of input image here
