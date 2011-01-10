@@ -106,6 +106,10 @@ namespace Graphics2D {
        *         specified segment
        */
       Coordinate GetLabelTopLeft(int label);
+      
+      float GetCircumference(const std::vector<int> &freeman);
+      
+      float GetRoundness(int area, float circumference);
     private:
 
       /// store hsv representation of input image here

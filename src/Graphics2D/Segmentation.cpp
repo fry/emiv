@@ -119,6 +119,7 @@ int Segmentation::GetFreemanCode(const int label, const Coordinate &firstPoint, 
   
   // initial direction is south
   int cb = 6;
+  // continue until we're at the starting pixel again
   while (true) {
     int ck, dx, dy;
     // test pixels from right to left in the general direction
@@ -167,7 +168,7 @@ void Segmentation::DrawContourFreeman(const Coordinate& firstPoint, const std::v
   std::vector<int>::const_iterator iter, end;
   end = freemanCode.end();
   
-  int i = 0;
+  // follow the contour code and fill the pixels with the specified color
   for (iter = freemanCode.begin(); iter != end; ++iter) {
     int dx, dy;
     get_fm(*iter, dx, dy);
@@ -180,6 +181,7 @@ void Segmentation::DrawContourFreeman(const Coordinate& firstPoint, const std::v
 }
 
 Coordinate Segmentation::GetLabelTopLeft(int label) {
+  // find the first pixel of the label from the top left
   for (int y = 0; y < labelImage_.GetHeight(); y ++) {
     for (int x = 0; x < labelImage_.GetWidth(); x ++) {
       const int px = labelImage_.GetPixel(x, y, 0);
@@ -188,4 +190,25 @@ Coordinate Segmentation::GetLabelTopLeft(int label) {
       }
     }
   }
+  
+  // precondition is that a top left point exists
+  assert(false);
+}
+
+float Segmentation::GetCircumference(const std::vector<int> &freeman) {
+  float circumference = 0;
+  const float sqrt2 = sqrt(2);
+  
+  std::vector<int>::const_iterator iter, end;
+  end = freeman.end();
+  
+  for (iter = freeman.begin(); iter != end; ++iter) {
+    circumference += *iter % 2 == 0 ? 1 : sqrt2;
+  }
+  
+  return circumference;
+}
+
+float Segmentation::GetRoundness(int area, float circumference) {
+  return (circumference * circumference) / area;
 }

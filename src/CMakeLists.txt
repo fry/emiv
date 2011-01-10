@@ -44,3 +44,6 @@ target_link_libraries(filter Graphics2D)
 
 add_executable(testSegmentation testSegmentation.cpp)
 target_link_libraries(testSegmentation Graphics2D)
+
+add_executable(testFeatures testFeatures.cpp)
+target_link_libraries(testFeatures Graphics2D)

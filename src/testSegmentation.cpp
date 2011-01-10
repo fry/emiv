@@ -4,10 +4,27 @@
 
 using namespace Graphics2D;
 
-void print_area_center(Segmentation seg, const std::string& name, int label) {
+void print_area_center(Segmentation& seg, const std::string& name, int label, Image& output) {
   int area; Coordinate center;
   seg.GetCenterAndArea(label, center, area);
   std::cout << name << " is located at " << center.GetX() << ", " << center.GetY() << " with area " << area << std::endl;
+  
+  Coordinate point(seg.GetLabelTopLeft(label));
+  std::vector<int> freeman_code;
+  seg.GetFreemanCode(label, point, freeman_code);
+  seg.DrawContourFreeman(point, freeman_code, Color::red(), output);
+
+  const float circumference = seg.GetCircumference(freeman_code);
+  const float roundness = seg.GetRoundness(area, circumference);
+  std::cout << "  Object has roundness of " << roundness << std::endl;
+  
+  if (rint(roundness) >= 45) {
+    std::cout << "  Object is a tree" << std::endl;
+  } else if (rint(roundness) >= 16) {
+    std::cout << "  Object is a rectangle" << std::endl;
+  } else {
+    std::cout << "  Object is a circle" << std::endl;
+  }
 }
 
 int main(int argc, char** argv) {
@@ -35,15 +52,9 @@ int main(int argc, char** argv) {
   Image label;
   seg.GetLabelImage(label);
   
-  print_area_center(seg, "Moon", 160);
-  print_area_center(seg, "Tree", 80);
-  print_area_center(seg, "Present", 240);
-  
-  const int mark_label = 80;
-  Coordinate point(seg.GetLabelTopLeft(mark_label));
-  std::vector<int> freeman_code;
-  seg.GetFreemanCode(mark_label, point, freeman_code);
-  seg.DrawContourFreeman(point, freeman_code, Color::red(), label);
+  print_area_center(seg, "Moon", 160, label);
+  print_area_center(seg, "Tree", 80, label);
+  print_area_center(seg, "Present", 240, label);
 
   label.SavePPM("out_label.ppm");
   std::cout << "saved out_label.ppm" << std::endl;
