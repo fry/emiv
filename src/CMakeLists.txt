@@ -39,11 +39,14 @@ add_subdirectory(Graphics2D)
 add_executable(testGraphics2D testGraphics2D.cpp)
 target_link_libraries(testGraphics2D Graphics2D)
 
-add_executable(filter filter.cpp)
-target_link_libraries(filter Graphics2D)
+#add_executable(filter filter.cpp)
+#target_link_libraries(filter Graphics2D)
 
 add_executable(testSegmentation testSegmentation.cpp)
 target_link_libraries(testSegmentation Graphics2D)
 
 add_executable(testFeatures testFeatures.cpp)
 target_link_libraries(testFeatures Graphics2D)
+
+add_executable(testStructureTensor testStructureTensor.cpp)
+target_link_libraries(testStructureTensor Graphics2D)

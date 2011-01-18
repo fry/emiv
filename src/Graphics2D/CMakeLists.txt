@@ -24,5 +24,6 @@ add_library(Graphics2D
   Filter.hh
   Filter.cpp
   Segmentation.hh
-  Segmentation.cpp)
+  Segmentation.cpp
+  StructureTensor.cpp)
 target_link_libraries(Graphics2D Graphics2DBase)

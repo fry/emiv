@@ -9,6 +9,8 @@ SET(GRAPHICS2DBASE_SRC
     Coordinate.cpp
     PrimitiveBase.hh
     PrimitiveBase.cpp
+	FloatImage.cpp
+	FloatImage.hh
 )
 
 IF(USE_GTK)

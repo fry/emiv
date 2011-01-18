@@ -1,220 +1,415 @@
+/**
+ * Filter Factory for NxN filters. Non-generic filters are realized by static methods.
+ * @author fkellner 12/10 
+ */
+#include <iostream>
 #include <Graphics2D/Filter.hh>
+#include <vector>
+#include <algorithm>
 #include <Graphics2D/ColorConversion.hh>
-
 #include <cmath>
 
-using namespace Graphics2D;
+using namespace std;
 
-namespace {
-  int bino(int n, int k) {
-    if (k == 0 || k == n) return 1;
-    return bino(n - 1, k - 1) + bino(n - 1, k);
+namespace Graphics2D {
+
+  Filter* Filter::CreateMean(int width, int height) {
+    // filter mask is initialized with "ones"
+    std::vector< std::vector<int> > mask(width, vector<int>(height, 1));
+    // filter using this mask is returned
+    return new Filter(mask);
   }
-}
 
-Filter::Filter(const std::vector<std::vector<int> >& mask, int scale): mask_(mask), scale_(scale) {
-  width_ = mask_.size();
-  height_ = mask_[0].size();
-  half_width_ = width_ / 2;
-  half_height_ = height_ / 2;
-  
-  // Calculate filter sum
-  sum_mask_ = 0;
-  for (int x = 0; x < width_; x++) {
-    for (int y = 0; y < height_; y++) {
-      sum_mask_ += mask_[x][y];
+  Filter* Filter::CreateBinomial(int width) {
+    // initialize with zeros
+    std::vector< std::vector<int> > mask(width, vector<int>(width, 0));
+
+    // first row
+    for (int x=0;x<width;x++) {
+      mask[x][0] = Binomial_(width-1,x);
     }
+    // first column
+    for (int y=0;y<width;y++) {
+      mask[0][y] = Binomial_(width-1,y);
+    }
+    // rest is filled by outer product
+    for (int x=1;x<width;x++) {
+      for (int y=1;y<width;y++) {
+        mask[x][y] = mask[x][0]*mask[0][y];
+      }
+    }
+    // debug output
+//    for (int x=0;x<width;x++) {
+//      for (int y=0;y<width;y++) {
+//        cout << mask[x][y] << " ";
+//      }
+//      cout << endl;
+//    }
+    return new Filter(mask);
   }
-}
 
-void Filter::FilterImage(const Image& src, Image& dst) {  
-  for (int x = half_width_; x < src.GetWidth() - half_width_; x++) {
-    for (int y = half_height_; y < src.GetHeight() - half_height_; y++) {
-      for (int c = 0; c < 3; c++) {
-        int sum = 0;
-        for (int fx = 0; fx < width_; fx++) {
-          for (int fy = 0; fy < height_; fy++) {
-            // Center filter around x/y
-            const int px = x + fx - half_width_;
-            const int py = y + fy - half_height_;          
-            sum += mask_[fx][fy] * src.GetPixel(px, py, c);
+  Filter* Filter::CreateGradX() {
+    // gradx is (-1 0 -1) / 2
+    std::vector< std::vector<int> > mask(3, vector<int>(1,0));
+    mask[0][0] = -1;
+    mask[2][0] = 1;
+    return new Filter(mask, 2);
+  }
+
+  Filter* Filter::CreateGradY() {
+    // gradx is (-1 0 -1)^T / 2
+    std::vector< std::vector<int> > mask(1, vector<int>(3,0));
+    mask[0][0] = -1;
+    mask[0][2] = 1;
+    return new Filter(mask, 2);
+  }
+
+  Filter* Filter::CreateLaplace() {
+    // laplace filter needs to be scaled with factor 8, because range is -1020 to 1020
+    std::vector< std::vector<int> > mask(3, vector<int>(3,0));
+    mask[0][1] = -1;
+    mask[1][0] = -1;
+    mask[1][1] = 4;
+    mask[1][2] = -1;
+    mask[2][1] = -1;
+    return new Filter(mask, 8);
+  }
+
+  void Filter::MeanRecursive(const Image& src, Image &dst, int width, int height) {
+    Image tmp;
+    register int w = src.GetWidth();
+    register int h = src.GetHeight();
+    register int hmw = (width-1) / 2;
+    register int hmh = (height-1) / 2;
+    register int x,y;
+    tmp.Init(h,w);
+    tmp.FillZero();
+    dst.Init(w,h);
+    dst.FillZero();
+    register unsigned char *srcdata = src.GetData();
+    register unsigned char *tmpdata = tmp.GetData();
+    register unsigned char *dstdata = dst.GetData();
+    register unsigned char *curdata;
+    register unsigned char *prev, *next;
+    int sum[3];
+    
+    for (y=0;y<h;y++) {
+      sum[2] = sum[1] = sum[0] = 0;
+      curdata = srcdata + (y*w)*3;
+      for (x=0;x<width;x++) {
+        sum[0] += *curdata++;
+        sum[1] += *curdata++;
+        sum[2] += *curdata++;
+      }
+      curdata = tmpdata + (hmw*h+y)*3;
+      *curdata++ = sum[0] / width;
+      *curdata++ = sum[1] / width;
+      *curdata = sum[2] / width;
+      curdata = srcdata + y*w*3 + hmw*3;
+      prev = curdata-hmw*3;
+      next = curdata+(hmw+1)*3;
+      for (x=hmw+1;x<w-hmw;x++) {
+        curdata = tmpdata + (x*h+y)*3;
+        sum[0] = sum[0] - *(prev++) + *(next++);
+        sum[1] = sum[1] - *(prev++) + *(next++);
+        sum[2] = sum[2] - *(prev++) + *(next++);
+        *curdata++ = sum[0] / width;
+        *curdata++ = sum[1] / width;
+        *curdata   = sum[2] / width;
+      }
+    }
+
+    for (y=0;y<w;y++) {
+      sum[2] = sum[1] = sum[0] = 0;
+      curdata = tmpdata + (y*h)*3;
+      for (x=0;x<height;x++) {
+        sum[0] += *curdata++;
+        sum[1] += *curdata++;
+        sum[2] += *curdata++;
+      }
+      curdata = dstdata + (hmh*w+y);
+      *curdata++ = sum[0] / width;
+      *curdata++ = sum[1] / width;
+      *curdata   = sum[2] / width;
+      curdata = tmpdata + y*h*3 + hmw*3;
+      prev = curdata-hmh*3;
+      next = curdata+(hmh+1)*3;
+      for (x=hmh+1;x<h-hmh;x++) {
+        curdata = dstdata + (x*w+y)*3; 
+        sum[0] = sum[0] - *(prev++) + *(next++);
+        sum[1] = sum[1] - *(prev++) + *(next++);
+        sum[2] = sum[2] - *(prev++) + *(next++);
+        *curdata++ = sum[0] / width;
+        *curdata++ = sum[1] / width;
+        *curdata   = sum[2] / width;
+      }
+    }
+    
+    dst.SetColorModel(src.GetColorModel());
+  }
+
+  void Filter::GradMag(const Image& src, Image &dst) {
+    Filter *gx = CreateGradX();
+    Filter *gy = CreateGradY();
+    Image gxImage, gyImage;
+    int w=src.GetWidth();
+    int h=src.GetHeight();
+    // get gradients in x and y dir
+    gx->FilterImage(src,gxImage);
+    gy->FilterImage(src,gyImage);
+    dst.Init(w,h);
+    unsigned char *gxdata = gxImage.GetData();
+    unsigned char *gydata = gyImage.GetData();
+    unsigned char *dstdata = dst.GetData();
+    int val;
+    // calculate magnitude
+    float scale = 255.0f/sqrt(128*128+128*128);
+    for (int x=0;x<w*h*3;x+=3) {
+      int gx = (int)gxdata[x]-127;
+      int gy = (int)gydata[x]-127;
+      val = sqrt(gx*gx+gy*gy)*scale;
+      dstdata[x+0]=(unsigned char)val;
+      dstdata[x+1]=dstdata[x+0];
+      dstdata[x+2]=dstdata[x+1];
+    }
+    // dont forget to delete the filters
+    delete gx;
+    delete gy;
+    dst.SetColorModel(ImageBase::cm_Grey);
+  }
+
+  void Filter::Rank3x3(const Image& src, Image &dst, int rank) {
+    Image grey;
+    if (src.GetColorModel() == ImageBase::cm_Grey) {
+      grey = src;
+    } else {
+      ColorConversion::ToGrey(src,grey);
+    }
+    if (rank < 0 || rank > 8) { 
+      cout << "rank must be in 0..8, using rank = 4" << endl;
+      rank = 4;
+    }
+    int w=src.GetWidth();
+    int h=src.GetHeight();
+    dst.Init(w,h);
+    unsigned char *srcdata = grey.GetData();
+    unsigned char *dstdata = dst.GetData();
+
+    vector<int> window(9);
+    for (int y=1;y<h-1;y++) {
+      for (int x=1;x<w-1;x++) {
+        int idx = 0;
+        // collect values of current window
+        for (int yw=y-1;yw<=y+1;yw++) {
+          for (int xw=x-1;xw<=x+1;xw++) {
+            window[idx++] = srcdata[(yw*w+xw)*3];
           }
         }
-
-        // If the filter sum is zero, use passed scale factor to convert from
-        // -scale/2 * 255 .. +scale/2 * 255 to 0 .. 255
-        if (sum_mask_ == 0)
-          dst.SetPixel(x, y, c, (sum + scale_ / 2 * 255) / scale_);
-        else
-          dst.SetPixel(x, y, c, sum / sum_mask_);
+        // sort the values by ascending order
+        std::sort(window.begin(), window.end());
+        // return value of desired rank
+        dstdata[(y*w+x)*3+0] = window[rank];
+        dstdata[(y*w+x)*3+1] = window[rank];
+        dstdata[(y*w+x)*3+2] = window[rank];
       }
     }
   }
-}
 
-//void recursive_helper(const Image& src, Image &dst, int width, int height)
-void Filter::MeanRecursive(const Image& src, Image &dst, int width, int height){
-	int half_width = width/2;
-	int half_height = height/2;
-	
-	Image tmp;
-	tmp.Init(src.GetWidth(), src.GetHeight());
-	
-	//for each color
-	for (int c=0; c<3; c++){
-		//run through all the rows
-		for (int pic_row=0; pic_row<src.GetHeight();pic_row++){
-			//initialize the zw_sum excluduing the last pixel
-			int zw_sum=0;
-			for (int filter=0; filter<width-1; filter++){
-				zw_sum+=src.GetPixel(filter, pic_row, c);
-			}
-			//run through all the pixels we can update (leave out the border)
-			for (int pic_col=half_width; pic_col < src.GetWidth()-half_width; pic_col++){
-				//add the last pixel
-				zw_sum+=src.GetPixel(pic_col + half_width, pic_row, c);
-				tmp.SetPixel(pic_col, pic_row, c, zw_sum/width);
-				//remove the first pixel
-				zw_sum-=src.GetPixel(pic_col - half_width, pic_row, c);
-			}
-		}
-		
-		//at the end run through all the cols and do the same thing
-		for (int pic_col=0; pic_col<src.GetWidth();pic_col++){
-			//initialize the zw_sum excluduing the last pixel
-			int col_zw_sum=0;
-			for (int filter=0; filter<height-1; filter++){
-				col_zw_sum+=tmp.GetPixel(pic_col, filter, c);
-			}
-			//run through all the pixels we can update (leave out the border)
-			for (int pic_row=half_height; pic_row < src.GetHeight()-half_height; pic_row++){
-				//add the last pixel
-				col_zw_sum+=tmp.GetPixel(pic_col, pic_row + half_height, c);
-				dst.SetPixel(pic_col, pic_row, c, col_zw_sum/width);
-				//remove the first pixel
-				col_zw_sum-=tmp.GetPixel(pic_col, pic_row - half_height, c);
-			}
-		}
-	}
-}
-
-Filter* Filter::CreateMean(int width, int height) {
-  std::vector<std::vector<int> > mask(width, std::vector<int>(height, 1));
-  return new Filter(mask);
-}
-
-Filter* Filter::CreateBinomial(int width) {
-  // Calculate binomial coefficients
-  int binos[width];
-  for (int i = 0; i < width; i++) {
-    binos[i] = ::bino(width, i);
-  }
-  
-  // Fill matrix
-  std::vector<std::vector<int> > mask(width, std::vector<int>(width));  
-  for (int x = 0; x < width; x++) {
-    for (int y = 0; y < width; y++) {
-      mask[x][y] = binos[x] * binos[y];
+  Filter::Filter(const std::vector< std::vector<int> > &mask, int scale) {
+    mask_ = mask;
+    width_ = mask_.size();
+    height_ = mask_[0].size();
+    if (width_ % 2 != 1 || height_ % 2 != 1) {
+      std::cout << "Filter must have odd size, " << width_ << " " << height_ << std::endl;
     }
+    sum_ = 0;
+    for (unsigned int x=0;x<width_;x++) {
+      for (unsigned int y=0;y<height_;y++) {
+        sum_ += mask_[x][y];
+      }
+    }
+    hmw_ = (width_-1) / 2;
+    hmh_ = (height_-1) / 2;
+
+    scale_ = scale;
+    offset_ = 255*(scale_/2);
   }
-  
-  return new Filter(mask);
-}
 
-void Filter::Rank3x3(const Image& src, Image& dst, int rank) {
-  assert(rank >= 0 && rank < 3*3+1);
-  
-  // Initialise temporary image to store grayscale version of the source image
-  Image tmp;
-  tmp.Init(src.GetWidth(), src.GetHeight());
-  ColorConversion::ToGrey(src, tmp);
-  
-  dst.SetColorModel(ImageBase::cm_Grey);
-  
-  // Place to store color values
-  std::vector<int> values;
-  values.reserve(3 * 3 + 1);
+  Filter::~Filter() {
+  }
 
-  for (int x = 1; x < src.GetWidth() - 1; x++) {
-    for (int y = 1; y < src.GetHeight() - 1; y++) {
-      // Read a 1 pixel environment
-      for (int fx = -1; fx <= 1; fx++) {
-        for (int fy = -1; fy <= 1; fy++) {
-          values.push_back(tmp.GetPixel(x + fx, y + fy, 0));
+  void Filter::FilterImage(const Image& src, Image &dst) {
+    int w = src.GetWidth();
+    int h = src.GetHeight();
+    
+    dst.Init(w,h);
+    dst.SetColorModel(src.GetColorModel());
+    
+    register unsigned char *srcdata = src.GetData();
+    register unsigned char *dstdata = dst.GetData();
+    
+    register unsigned char *curdata;
+    
+    // special case for grey images
+    if (src.GetColorModel() == ImageBase::cm_Grey) {
+      register int idx, val;
+      register int nextLineOffset = w*3-3*width_;
+      register int windowOffset = -hmh_*w*3 -hmw_*3;
+      register unsigned char result;
+      for (int y=hmh_;y<h-hmh_;y++) {
+        for (int x=hmw_;x<w-hmw_;x++) {
+          val = 0;
+          idx = (y*w+x)*3;
+          curdata = srcdata + idx + windowOffset;
+          for (unsigned int yw=0;yw<height_;yw++) {
+            for (unsigned int xw=0;xw<width_;xw++) {
+              val += *curdata * mask_[xw][yw];
+              curdata+=3;
+            }
+            curdata+=nextLineOffset;
+          }
+          curdata = dstdata+idx;
+          if (sum_ == 0) {
+            result = (val + offset_) / scale_;
+          } else {
+            result = val / sum_;
+          }
+          *curdata++ = result;
+          *curdata++ = result;
+          *curdata   = result;
         }
       }
-      
-      // Sort the values
-      std::sort(values.begin(), values.end());
-      
-      // From the sorted list, use the pixel at the specified rank as output
-      const int current_value = tmp.GetPixel(x, y, 0);
-      const int new_value = values[rank];
-      dst.SetPixel(x, y, 0, new_value);
-      dst.SetPixel(x, y, 1, new_value);
-      dst.SetPixel(x, y, 2, new_value);
-      
-      values.clear();
-    }
-  }
-}
-
-Filter* Filter::CreateGradX() {
-  //  0  0  0
-  // -1  0  1
-  //  0  0  0
-  std::vector<std::vector<int> > mask(3, std::vector<int>(1, 0));
-  mask[0][0] = -1;
-  mask[2][0] = 1;
-  
-  return new Filter(mask, 2);
-}
-
-Filter* Filter::CreateGradY() {
-  // 0 -1  0
-  // 0  0  0
-  // 0  1  0
-  std::vector<std::vector<int> > mask(1, std::vector<int>(3, 0));
-  mask[0][0] = -1;
-  mask[0][2] = 1;
-  
-  return new Filter(mask, 2);
-}
-
-Filter* Filter::CreateLaplace() {
-  //  0 -1  0
-  // -1  4 -1
-  //  0 -1  0
-  std::vector<std::vector<int> > mask(3, std::vector<int>(3, 0));
-  mask[1][0] = -1;
-  mask[0][1] = -1;
-  mask[2][1] = -1;
-  mask[1][2] = -1;
-  mask[1][1] = 4;
-  
-  return new Filter(mask, 4);
-}
-
-void Filter::FilterGradMag(const Image& src, Image& dst) {
-  // Filter an image by applying both gradient filters and
-  // scaling the resulting magnitude of the vector down to
-  // 0..255 again
-  
-  // Calculate the proper scaling factor for the euclidian metric
-  const float mag_factor = 255.0 / std::sqrt(255*255 + 255*255);
-  
-  for (int x = 1; x < src.GetWidth() - 1; x++) {
-    for (int y = 1; y < src.GetHeight() - 1; y++) {
-      for (int c = 0; c < 3; c ++) {
-        // x grad
-        const int dx = -src.GetPixel(x - 1, y, c) + src.GetPixel(x + 1, y, c);
-        // y grad      
-        const int dy = -src.GetPixel(x, y - 1, c) + src.GetPixel(x, y + 1, c);
-        
-        // scale down magnitude
-        const int mag_real = rint(std::sqrt(dx*dx + dy*dy) * mag_factor);
-        dst.SetPixel(x, y, c, mag_real);
+    } else {
+      register int idx, weight;
+      int  val[3];
+      register int nextLineOffset = w*3-3*width_;
+      register int windowOffset = -hmh_*w*3 -hmw_*3;
+      for (int y=hmh_;y<h-hmh_;y++) {
+        for (int x=hmw_;x<w-hmw_;x++) {
+          // stores weighted sums for each channel
+          val[0] = 0;
+          val[1] = 0;
+          val[2] = 0;
+          // x and y in filter mask
+          // index of pixel in data array
+          idx = (y*w+x)*3;
+          // inner loops walk the window
+          curdata = srcdata + idx + windowOffset;
+          for (unsigned int yw=0;yw<height_;yw++) {
+            for (unsigned int xw=0;xw<width_;xw++) {
+              // calculate weighted sums for each channel individually
+              weight = mask_[xw][yw];
+              val[0] += *curdata++ * weight;
+              val[1] += *curdata++ * weight;
+              val[2] += *curdata++ * weight;
+            }
+            curdata+=nextLineOffset;
+          }
+          curdata = dstdata + idx;
+          if (sum_ == 0) {
+            *curdata++ = (val[0] + offset_) / scale_;
+            *curdata++ = (val[1] + offset_) / scale_;
+            *curdata   = (val[2] + offset_) / scale_;
+          } else {
+            *curdata++ = val[0] / sum_;
+            *curdata++ = val[1] / sum_;
+            *curdata   = val[2] / sum_;
+          }
+        }
       }
     }
   }
+
+  int Filter::Binomial_(int n, int k) {
+    if (k==0 || k==n) return 1;
+    return Binomial_(n-1,k-1)+(Binomial_(n-1, k));
+  }
+
+  
+  
+  void Filter::FilterImage(const Image& src, FloatImage &dst) {
+    if (!src.Valid() || src.GetColorModel() != ImageBase::cm_Grey) {
+      cout << "FilterImage to float only accepts grey images" << endl;
+      return;
+    }
+
+    int w = src.GetWidth();
+    int h = src.GetHeight();
+    
+    dst.Init(w,h);
+    
+    register unsigned char *srcdata = src.GetData();
+    register float *dstdata = dst.GetData();
+    
+    register unsigned char *curdata;
+    
+    register int idx;
+    float val;
+    register int nextLineOffset = w*3-3*width_;
+    register int windowOffset = -hmh_*w*3 -hmw_*3;
+    for (int y=hmh_;y<h-hmh_;y++) {
+      for (int x=hmw_;x<w-hmw_;x++) {
+        val = 0.0f;
+        idx = (y*w+x)*3;
+        curdata = srcdata + idx + windowOffset;
+        for (unsigned int yw=0;yw<height_;yw++) {
+          for (unsigned int xw=0;xw<width_;xw++) {
+            val += (*curdata * mask_[xw][yw])/ 255.0f;
+            curdata+=3;
+          }
+          curdata+=nextLineOffset;
+        }
+        if (sum_ == 0) {
+          dstdata[y*w+x] = (float)val / (float)scale_; 
+        } else {
+          dstdata[y*w+x] = (float)val / (float)sum_; 
+        }
+      }
+    }
+  }
+
+  void Filter::FilterImage(const FloatImage& src, FloatImage &dst) {
+    if (!src.Valid()) {
+      cout << "FilterImage not valid" << endl;
+      return;
+    }
+
+    int w = src.GetWidth();
+    int h = src.GetHeight();
+    
+    dst.Init(w,h);
+    dst.FillZero();
+    
+    register float *srcdata = src.GetData();
+    register float *dstdata = dst.GetData();
+    
+    register float *curdata;
+    
+    register int idx;
+    float val;
+    register int nextLineOffset = w-width_;
+    register int windowOffset = -hmh_*w -hmw_;
+
+    for (int y=hmh_;y<h-hmh_;y++) {
+      for (int x=hmw_;x<w-hmw_;x++) {
+        val = 0.0f;
+        idx = (y*w+x);
+        curdata = srcdata + idx + windowOffset;
+        for (unsigned int yw=0;yw<height_;yw++) {
+          for (unsigned int xw=0;xw<width_;xw++) {
+            val += *curdata * (float)(mask_[xw][yw]);
+            curdata++;
+          }
+          curdata+=nextLineOffset;
+        }
+        curdata = dstdata + idx;
+        if (sum_ == 0) {
+          *curdata = val / (float)scale_; 
+        } else {
+          *curdata = val / (float)sum_; 
+        }
+      }
+    }
+  }
+
 }
