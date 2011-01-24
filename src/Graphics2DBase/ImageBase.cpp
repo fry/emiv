@@ -25,6 +25,7 @@ namespace Graphics2D {
     // copy everything from other image
     width_ = other.width_;
     height_ = other.height_;
+    colormodel_ = other.colormodel_;
     data_ = new unsigned char[width_*height_*3];
     memcpy(data_, other.data_, width_*height_*3);
   }
@@ -38,7 +39,17 @@ namespace Graphics2D {
     
     // check if call is like a=a, which means do nothing
     if (this != &other) {
-      Init(other.width_, other.height_);
+      if (Valid()) {
+        if (other.width_ != width_ || other.height_ != height_) {
+          delete[] data_;
+          data_ = NULL;
+        }
+      }
+      width_ = other.width_;
+      height_ = other.height_;
+      colormodel_ = other.colormodel_;
+      if (!Valid())
+        data_ = new unsigned char[width_*height_*3];
       memcpy(data_, other.data_, width_*height_*3);
     }
     return *this;

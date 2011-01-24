@@ -1,26 +1,33 @@
 #include <Graphics2D/PrimitivePoint.hh>
 
 namespace Graphics2D {
-  PrimitivePoint::PrimitivePoint(const Color& color): PrimitiveBase(color) {  
-  }
-  
-  PrimitivePoint::PrimitivePoint(const Color& color, const Coordinate& coordinate): PrimitiveBase(color) {
-    SetCoordinate(coordinate);
+
+  PrimitivePoint::PrimitivePoint() {
+    // default to a black point at (0,0)
+    color_ = Color::black();
+    coords_.resize(1);
     name_ = "Point";
   }
-  
-  void PrimitivePoint::Draw(ImageBase* im) {
-    const Coordinate& coord = GetCoordinate();
-    const Color& color = GetColor();
 
-    const int x = coord.GetX();
-    const int y = coord.GetY();
-    
-    if (x < 0 || y < 0 || x >= im->GetWidth() || y >= im->GetHeight())
-      return;
+  PrimitivePoint::~PrimitivePoint() {
+    // TODO Auto-generated destructor stub
+  }
 
-    im->SetPixel(x, y, 0, color.GetRed());
-    im->SetPixel(x, y, 1, color.GetGreen());
-    im->SetPixel(x, y, 2, color.GetBlue());
+  void PrimitivePoint::SetCoordinate(const Coordinate &coo) {
+    coords_[0] = coo;
+  }
+
+  void PrimitivePoint::Draw(ImageBase *im) {
+    unsigned int w=im->GetWidth();
+    unsigned int h=im->GetHeight();
+    // check if point is in image
+    if (coords_[0].x()>=0 && coords_[0].y()>=0 && coords_[0].x()<(int)w && coords_[0].y()<(int)h) {
+      unsigned char *data = im->GetData();
+      unsigned int idx = (coords_[0].y()*w+coords_[0].x())*3;
+      // draw
+      data[ idx + 0 ] = color_.r();
+      data[ idx + 1 ] = color_.g();
+      data[ idx + 2 ] = color_.b();
+    }
   }
 }

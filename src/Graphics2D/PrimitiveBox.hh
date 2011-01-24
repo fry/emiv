@@ -1,18 +1,18 @@
-#ifndef PRIMITIVEBOX_HH
-#define PRIMITIVEBOX_HH
+#ifndef PRIMITIVEBOX_HH_
+#define PRIMITIVEBOX_HH_
 
-#include <Graphics2D/PrimitivePolygon.hh>
-#include <Graphics2DBase/ImageBase.hh>
-#include <vector>
+#include <Graphics2D/PrimitivePolygon.hh> 
 
 namespace Graphics2D {
-  class PrimitiveBox: public PrimitivePolygon {
-  public:
-    PrimitiveBox(const Color& color, const Coordinate& a, const Coordinate& b);
-    PrimitiveBox(const Color& color, const std::vector<Coordinate>& points);
-    
-    virtual void SetCoordinates(const std::vector<Coordinate>& coordinates);
+
+  class PrimitiveBox : public PrimitivePolygon {
+    public:
+      PrimitiveBox();
+      virtual ~PrimitiveBox();
+      
+      void SetCoordinates(const std::vector<Coordinate> &coords);
   };
+
 }
 
-#endif
+#endif /* PRIMITIVEBOX_HH_ */

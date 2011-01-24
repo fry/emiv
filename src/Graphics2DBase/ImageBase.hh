@@ -1,138 +1,62 @@
-/*
- * ImageBase
- * @author fkellner, 10/10
- */
-
 #ifndef IMAGEBASE_HH_
 #define IMAGEBASE_HH_
 
 #include <string>
 #include <iostream>
 
-// our library will live in Graphics2D name space
+// our library will live in Graphics2D namespace
 namespace Graphics2D {
 
   class ImageBase {
     public:
-
-      // each image has a color model, defaults to rgb
+      
+      // each image has a colormodel, defaults to rgb
       enum ColorModel {
         cm_RGB=0,
         cm_HSV,
         cm_Grey
       };
       
-      /**
-       * constructor, creates empty image
-       */
+      // creates empty image
       ImageBase();
-      
-      /**
-       * constructor, copies image from other instance
-       */
+      // copies image from other instance
       ImageBase(const ImageBase &other);
-      
-      /**
-       * = operator, copies image from other instance
-       * use ImageBase a = b;
-       */
+      // copies image from other instance
       ImageBase& operator=(const ImageBase &other);
 
-      /**
-       * destructor, releases memory
-       */
+      // deletes the image
       virtual ~ImageBase();
       
-      /**
-       * @brief Initialize image size and channels
-       *
-       * @param width  image width  of new image
-       * @param height image height of new image
-       *
-       */
+      // creates memory for a width*height 3 channel image
       void Init(unsigned int width, unsigned int height);
       
-      /**
-       * @brief checks if image is initialized
-       * @return true if image is initialized
-       */
+      // returns true if image is inited
       bool Valid() const;
       
-      /**
-       * @brief set every pixel in image to r=g=b=0, black
-       *
-       * implement in subclass
-       */
+      // sets every pixel to black ( rgb(0,0,0) ), must be implemented by child 
       virtual void FillZero() = 0;
       
-      /**
-       * @brief get value of a specific pixel's color channel
-       * @param x x-coordinate of pixel
-       * @param y y-coordinate of pixel
-       * @param ch color channel, 0,1 or 2 for r,g or b
-       *
-       * implement in subclass
-       */
+      // returns color channel value of pixel at (x,y) position, must be implemented by child
       virtual inline unsigned char GetPixel(const int &x, const int &y, const int &ch) const = 0;
       
-      /**
-       * @brief set value of a specific pixel's color channel
-       * @param x x-coordinate of pixel
-       * @param y y-coordinate of pixel
-       * @param ch color channel, 0,1 or 2 for r,g or b
-       * @param value color channel value to be set
-       *
-       * implement in subclass
-       */
+      // set a value for color channel ch for pixel (x,y)
       virtual inline void SetPixel(const int &x, const int &y, const int &ch, const unsigned char &value) = 0;
 
-      /**
-       * @brief load image from *.ppm file and set data, width, height
-       * can read P3 and P6 format
-       *
-       * implement in subclass
-       */
+      // load from a ppm image file, loads p3 and p6 images
       virtual int LoadPPM(const std::string &filename) = 0;
-
-      /**
-       * @brief save image to *.ppm file in P6 format
-       *
-       * implement in subclass
-       */
+      // save as a ppm p6 image file
       virtual int SavePPM(const std::string &filename) = 0;
 
-      /**
-       * @brief get pointer of image data
-       *
-       * A pixel can be accessed  by
-       * GetData()[row * getHeight() + col * Channelcount + Channel]
-       * (ChannelCount is 3)
-       *
-       * @return pointer to first pixel of image
-       */
+      // get pointer to data
+      inline unsigned char *GetData() { return data_; }
       inline unsigned char *GetData() const { return data_; }
-
-      /**
-       * @brief get image width
-       * @return image width
-       */
+      // get image width
       inline unsigned int GetWidth() const { return width_; }
-
-      /**
-       * @brief get image height
-       * @return image height
-       */
+      // get image height
       inline unsigned int GetHeight() const { return height_; }
-
-      /**
-       * @brief get color model
-       * @return ColorModel
-       */
+      // get color model
       inline ColorModel GetColorModel() const { return colormodel_; }
-      /**
-       * @brief Set color model
-       * @param colormodel to set, will not modify data
-       */
+      // set color model
       inline void SetColorModel(ColorModel colormodel) { colormodel_ = colormodel; }
 
     protected:

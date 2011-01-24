@@ -1,8 +1,5 @@
 /**
  * Filter Factory for NxN filters. Non-generic filters are realized by static methods.
- * 
- * New: Filtering of FloatImages, please read comments below
- * 
  * @author fkellner 12/10 
  */
 #ifndef FILTER_HH_
@@ -36,39 +33,15 @@ namespace Graphics2D {
       
       /// 3x3 rank filter, rank=4 is median filter, rank=0 erosion, rank=8 dilation
       static void Rank3x3(const Image& src, Image &dst, int rank=4);
+      
+      static void NonMaximumSuppression(const FloatImage &src, FloatImage &dst, float threshold, int size=21);
 
       /// filter image src, store result in dst
       void FilterImage(const Image& src, Image &dst);
 
-      /**
-       * Filtering a Greyscale Image to a one-channel FloatImage
-       * It is not necessary to shift, scale or discretize the result, so it is often better suited for image processing.
-       * 
-       * Usage example:
-       * Image rgbImage, greyImage;
-       * FloatImage gx;
-       * 
-       * rgbImage.LoadPPM("myholidaypic.ppm");
-       * ColorConversion::ToGrey(rgbImage, greyImage);
-       * 
-       * Filter *filterGradX = Filter::CreateGradX();
-       * filterGradX->FilterImage(greyImage, gx);
-       * delete filterGradX;
-       * gx.GetAsGreyImage(greyImage);
-       * greyImage.SavePPM("myholidaypic-gradX.ppm");
-       * 
-       * @param src Input image, will be scaled from [0..255] to [0.0f..1.0f]!
-       * @param dst float valued output image (any range!)
-       */
       void FilterImage(const Image& src, FloatImage &dst);
-      
-      /**
-       * Filtering from FloatImage to FloatImage
-       * @param src input image
-       * @param dst output image
-       */
       void FilterImage(const FloatImage& src, FloatImage &dst);
-
+      
       virtual ~Filter();
     protected:
       /// filters can only be created by factory

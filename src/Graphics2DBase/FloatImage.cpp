@@ -32,8 +32,9 @@ namespace Graphics2D {
       }
       width_ = other.width_;
       height_ = other.height_;
-      if (!Valid())
+      if (!Valid()) {
         data_ = new float[width_*height_];
+      }
       memcpy(data_, other.data_, width_*height_*sizeof(float));
     }
     return *this;

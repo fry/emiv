@@ -4,8 +4,8 @@
 #include <vector>
 
 #include <Graphics2D/Image.hh>
-#include <Graphics2DBase/Coordinate.hh>
-#include <Graphics2DBase/Color.hh>
+#include <Graphics2D/Coordinate.hh>
+#include <Graphics2D/Color.hh>
 
 namespace Graphics2D {
 
@@ -16,32 +16,22 @@ namespace Graphics2D {
     public:
       /**
        * if input image is rgb:
-       * constructor stores the image in a hsv representation (color conversion)
-       * initializes internal label image with zeros
-       *
-       * if input image is hsv:
-       * constructor stores the hsv image
+       * constructor stores the image in a hsv representation
        * initializes internal label image with zeros
        * 
        * if input image is grey:
        * consider input image as label image
-       * 
-       * needed for task 9.1
        */
       Segmentation(const Image &inputImage);
 
       /**
        * delete dynamic memory if needed
-       *
-       * needed for task 9.1
        */
       virtual ~Segmentation();
       
       /**
        * add pixels with minHue <= hue <= maxHue with label "label" to the label image
        * (only works if hsv image is present! consider hue wrap around)
-       * 
-       * needed for task 9.1
        * 
        * @param label label for found pixels
        * @param minHue minimum hue of pixel
@@ -51,18 +41,9 @@ namespace Graphics2D {
       void AddHueSegment(const int label, const int minHue, const int maxHue, const int minSat=128);
       
       /**
-       * perform one step closing operation on label image
-       *
-       * needed for task 9.1
+       * perform closing operation on label image
        */
       void ClosingOperation();
-
-      /**
-       * return label image in labelImage
-       * 
-       * needed for task 9.1
-       */
-      void GetLabelImage(Image &labelImage);
       
       /**
        * compute center of mass and area of object with label "label"
@@ -74,13 +55,13 @@ namespace Graphics2D {
       int GetCenterAndArea(const int label, Coordinate &center, int &area);
       
       /**
-       * compute freeman code of object with label "label" with Pavlidis' Algorithm
+       * compute freeman code of object with label "label"
        * @param label label of object
        * @param firstPoint Coordinate of first encountered object pixel 
        * @param freemanCode result vector containing freeman code
        * @return 0 on success, 1 if no such label exists
        */
-      int GetFreemanCode(const int label, const Coordinate &firstPoint, std::vector<int> &freemanCode);
+      int GetFreemanCode(const int label, Coordinate &firstPoint, std::vector<int> &freemanCode);
       
       /**
        * starting at coordinate firstpoint, freeman code is unrolled to actual pixel coordinates and drawn
@@ -90,34 +71,35 @@ namespace Graphics2D {
        * @param color color to draw the contour in
        * @param targetImage where to draw the contour
        */
-      void DrawContourFreeman(const Coordinate& firstPoint, const std::vector<int> &freemanCode, 
+      void DrawContourFreeman(const Coordinate firstPoint, const std::vector<int> &freemanCode, 
           const Color color, Image &targetImage);
       
+      /**
+       * estimate object circumference from freeman code
+       * @param freemanCode see GetFreemanCode
+       * @return estimated circumference
+       */
+      float GetCircumference(const std::vector<int> &freemanCode);
+      
       /*
-       * Add more functions as you need them.
+       * Maybe add more functions as you need them.
        * Consider making functions private if you intent to use them only internally. 
        */
+      void GetLabelImage(Image &labelImage);
       
-      /**
-       * finds the first pixel of this label encountered when scanning lines
-       * from top left to bottom right. Precondition is the existance of such
-       * a pixel.
-       * @return the pixel coordinate of the most top left pixel in the
-       *         specified segment
-       */
-      Coordinate GetLabelTopLeft(int label);
+      void GetAbsoluteCoordinates(const Coordinate &firstPoint, const std::vector<int> &freemanCode, std::vector<Coordinate> &coords);
       
-      float GetCircumference(const std::vector<int> &freeman);
-      
-      float GetRoundness(int area, float circumference);
     private:
+
+      /// translates a freeman code direction to new x,y coordinates
+      int GetFreemanDirXY_(int dir, int &x, int &y);
 
       /// store hsv representation of input image here
       Image hsvImage_;
       /// use this image to do the labeling
       Image labelImage_;
-      
-      // add more variables as you need them
+      /// store image dims
+      unsigned int width_, height_;
   };
 
 }

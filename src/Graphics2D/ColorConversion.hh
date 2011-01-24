@@ -1,15 +1,22 @@
-#ifndef COLORCONVERSION_HH
-#define COLORCONVERSION_HH
+/* color conversion from different color space models, slow and fast methods
+ * @author fkellner 10/10
+ */
+#ifndef COLORCONVERSION_HH_
+#define COLORCONVERSION_HH_
 
 #include <Graphics2D/Image.hh>
 
 namespace Graphics2D {
+
   class ColorConversion {
-  public:
-    static void ToGrey(const Image& src, Image& dst);
-    static void ToHSV(const Image& src, Image& dst);
-    static void ToRGB(const Image& src, Image& dst);
+    public:
+
+      static int ToRGB(const Image &src, Image &dst);
+      static int ToHSV(const Image &src, Image &dst);
+      static int ToGrey(const Image &src, Image &dst);
+
   };
+
 }
 
-#endif
+#endif /* COLORCONVERSION_HH_ */

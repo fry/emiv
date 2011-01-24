@@ -1,25 +1,26 @@
-#ifndef PRIMITIVEPOINT_HH
-#define PRIMITIVEPOINT_HH
+/*
+ * A Point Primitive
+ * @author fkellner, 10/10
+ */
 
-#include <Graphics2DBase/PrimitiveBase.hh>
+#ifndef PRIMITIVEPOINT_HH_
+#define PRIMITIVEPOINT_HH_
+
+#include <Graphics2D/PrimitiveBase.hh>
 
 namespace Graphics2D {
-  class PrimitivePoint: public PrimitiveBase {
-  public:
-    PrimitivePoint(const Color& color);
-    PrimitivePoint(const Color& color, const Coordinate& coordinate);
-    
-    inline const Coordinate& GetCoordinate() const {
-      return coordinates_[0];
-    }
-    
-    inline void SetCoordinate(const Coordinate& coordinate) {
-      coordinates_.clear();
-      coordinates_.push_back(coordinate);
-    }
-    
-    void Draw(ImageBase* im);
+
+  class PrimitivePoint : public PrimitiveBase {
+    public:
+      PrimitivePoint();
+      virtual ~PrimitivePoint();
+      
+      void SetCoordinate(const Coordinate &coo);
+      
+      void Draw(ImageBase *im);
+      
   };
+
 }
 
-#endif
+#endif /* PRIMITIVEPOINT_HH_ */

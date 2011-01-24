@@ -6,12 +6,7 @@
 
 #include <iostream>
 #include <cstdlib>
-#ifdef __APPLE__
-  #include <glut.h>
-#else
-  #include <GL/glut.h>
-#endif
-
+#include <GL/glut.h>
 #include <Graphics2DBase/Canvas2D.hh>
 
 namespace Graphics2D {

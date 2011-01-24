@@ -1,29 +1,46 @@
 #include <Graphics2D/PrimitiveStar.hh>
 
 namespace Graphics2D {
-  PrimitiveStar::PrimitiveStar(const Color& color, const Coordinate& position, float radius, int edge_count): PrimitivePolygon(color) {
-    const float step = 2*M_PI / edge_count / 2.0;
+
+  PrimitiveStar::PrimitiveStar(int numCones) {
+    color_ = Color::black();
+    name_ = "Star";
+    coords_.clear();
+    numCones_ = numCones;
+    closed_ = true;
+  }
     
-    std::vector<Coordinate> points;
-    points.reserve(edge_count * 2);
-    const Coordinate origin;
-    float rotation = 0;
-    for (int i = 0; i < edge_count; i++) {
-      // Outer point
-      Coordinate point(0, -radius * 2);
-      point.Rotate(origin, rotation);
-      point += position;
-      points.push_back(point);
-      rotation += step;
-      
-      // Inner point
-      point = Coordinate(0, -radius);
-      point.Rotate(origin, rotation);
-      point += position;
-      points.push_back(point);
-      rotation += step;
+  PrimitiveStar::~PrimitiveStar() {
+    // TODO Auto-generated destructor stub
+  }
+
+  void PrimitiveStar::SetCoordinates(const std::vector<Coordinate> &coords) {
+    
+    if (coords.size() != 2) {
+      std::cout << "A star has one coordinate for center and a second one determining the size" << std::endl;
+      return;
     }
     
-    SetCoordinates(points);
+    coords_.clear();
+    Coordinate middle = coords[0];
+    
+    float radius = (float)middle.Dist(coords[1]);
+    
+    Coordinate rotlarge = middle + Coordinate(0.0f,1.0f) * radius;
+    Coordinate rotsmall = middle + Coordinate(0.0f,1.0f) * (radius/2);
+    
+    float rotangle = 2.0f * M_PI / (float)numCones_;
+    
+    rotsmall.Rotate(middle, rotangle / 2.0f);
+    
+    for (int i=0;i<numCones_;i++) {
+      coords_.push_back(rotlarge);
+      coords_.push_back(rotsmall);
+      rotlarge.Rotate(middle, rotangle );
+      rotsmall.Rotate(middle, rotangle );
+    }
+    coords_.push_back(rotlarge);
+    rotlarge.Rotate(middle, rotangle );
+    PrimitivePolygon::SetCoordinates(coords_);
   }
 }

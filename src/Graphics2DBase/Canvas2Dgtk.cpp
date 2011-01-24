@@ -156,18 +156,19 @@ namespace Graphics2D {
     return 0;
   }
 
-  
   int Canvas2D::MouseMotionEvents (GtkWidget* /*widget*/, GdkEventMotion* event) {
     if (instance_->painter_ == NULL) { return 0; }
-	  if (instance_->buttonDown_) {
+    if (instance_->buttonDown_) {
       instance_->painter_->MouseMove( (int) event->x, (int) event->y);
     }
+    instance_->lastx_ = (int) event->x;
+    instance_->lasty_ = (int) event->y;
     return 0;
   }
 
   int Canvas2D::KeyboardEvents (GtkWidget* /*widget*/, GdkEventKey* event) {
-	if (instance_->painter_ == NULL) { return 0; }
-    instance_->painter_->KeyPressed( (unsigned char) event->keyval, 0, 0);
+  if (instance_->painter_ == NULL) { return 0; }
+    instance_->painter_->KeyPressed( (unsigned char) event->keyval, instance_->lastx_, instance_->lasty_);
     return 0;
   }
 

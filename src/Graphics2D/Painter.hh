@@ -1,71 +1,59 @@
-#ifndef PAINTER_HH
-#define PAINTER_HH
+/*
+ * painter is a container for primitives, new primitives are added my gui interaction
+ */
+#ifndef PAINTER_HH_
+#define PAINTER_HH_
 
-#include <memory>
-
-#include <Graphics2DBase/PrimitiveBase.hh>
+#include <vector>
 #include <Graphics2DBase/PainterBase.hh>
-#include <Graphics2D/Image.hh>
-#include <Graphics2D/Histogram.hh>
+#include <Graphics2D/PrimitiveBase.hh>
+#include <Graphics2D/Color.hh>
 
 namespace Graphics2D {
-  class Painter: public PainterBase {
+
+  class Painter : public PainterBase {
     public:
-      Painter(ImageBase* background);
+      Painter();
       virtual ~Painter();
       
-      // Add a primitive to this Painter, takes ownership of the pointer
-      void AddPrimitive(PrimitiveBase* primitive);
-      
-      virtual void Draw();
+      void AddPrimitive(PrimitiveBase *primitive);
       
       virtual std::string GetColorString();
       virtual std::string GetString();
+      
+      virtual void Draw();
       
       virtual void MouseDown(int x, int y);
       
       virtual void MouseUp(int x, int y);
       
       virtual void MouseMove(int x, int y);
-      
+
       virtual void KeyPressed(unsigned char ch, int x, int y);
-    protected:
-      Color GetColor();
-      PrimitiveBase* GetCurrentPrimitive(int x, int y);
-      void UpdateHistogram();
       
-      // The background image specified by the user
-      ImageBase* specified_background_;
-      
-      // The background image to use
-      Image background_;
-      
-      // The histogram of the background image
-      Histogram hist_red_;
-      Histogram hist_green_;
-      Histogram hist_blue_;
-      
-      Histogram hist_hue_;
-      Histogram hist_saturation_;
-      Histogram hist_value_;
-      
-      // Whether to display the histogram data
-      bool display_histogram_;
-      
-      // The ghost primitive shown when drawing a primitive
-      std::auto_ptr<PrimitiveBase> temporary_primitive_;
-      
-      // The list of primitives contained in this picture
+    private:
+      enum DrawMode {
+        point=0,
+        line,
+        box,
+        polygon,
+        star
+      };
       std::vector<PrimitiveBase*> primitives_;
+      std::vector<Coordinate> coo_;
+
+      DrawMode drawMode_;
+      Color color_;
       
-      // The points of a polygon that is being drawn
-      std::vector<Coordinate> polygon_points_;
+      PrimitiveBase* previewPrimitive_;
       
-      std::string color_string_;
-      std::string primitive_string_;
+      bool togrey_;
       
-      int draw_start_x, draw_start_y;
+      bool enhance_;
+      
+      bool drawHisto_;
   };
+
 }
 
-#endif
+#endif /* PAINTER_HH_ */

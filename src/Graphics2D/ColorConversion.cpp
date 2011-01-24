@@ -1,138 +1,189 @@
-#include <Graphics2D/Image.hh>
+
 #include <Graphics2D/ColorConversion.hh>
+#include <cmath>
+#include <algorithm>
 
-#include <stdexcept>
-using namespace Graphics2D;
+using namespace std;
 
-void ColorConversion::ToGrey(const Image& src, Image& dst) {
-  Image img;
-  if (src.GetColorModel() == ImageBase::cm_Grey) {
-    dst = src;
-    return;
-  } else if (src.GetColorModel() == ImageBase::cm_HSV) {
-    img.Init(src.GetWidth(), src.GetHeight());
-    ColorConversion::ToRGB(src, img);
-  } else
-    img = src;
+namespace Graphics2D {
 
-  if (!img.Valid())
-    throw std::runtime_error("uninitialized image");
+  int ColorConversion::ToRGB(const Image &src, Image &dst) {
     
-  for (int x = 0; x < src.GetWidth(); x++) {
-    for (int y = 0; y < src.GetHeight(); y++) {
-      unsigned char val = static_cast<unsigned char>(
-                           (30 * img.GetPixel(x, y, 0)) / 100 +
-                           (59 * img.GetPixel(x, y, 1)) / 100 +
-                           (11 * img.GetPixel(x, y, 2)) / 100);
-      dst.SetPixel(x, y, 0, val);
-      dst.SetPixel(x, y, 1, val);
-      dst.SetPixel(x, y, 2, val);
+    if (src.GetColorModel() == Image::cm_RGB) {
+      // if already rgb, just copy to dst
+      dst = src;
+      return 0;
+    } 
+    if (src.GetColorModel() == Image::cm_Grey) {
+      cout << "can not convert from grey to rgb" << endl;
+      return -1;
     }
-  }
-  
-  dst.SetColorModel(ImageBase::cm_Grey);
-}
 
-void ColorConversion::ToHSV(const Image& src, Image& dst) {
-  if (src.GetColorModel() == ImageBase::cm_HSV)
-    dst = src;
-
-  if (!src.Valid())
-    throw std::runtime_error("uninitialized image");
+    unsigned int w=src.GetWidth();
+    unsigned int h=src.GetHeight();
+    dst.Init(w,h);
     
-  for (int x = 0; x < src.GetWidth(); x++) {
-    for (int y = 0; y < src.GetHeight(); y++) {
-      unsigned char r, g, b;
-      r = src.GetPixel(x, y, 0);
-      g = src.GetPixel(x, y, 1);
-      b = src.GetPixel(x, y, 2);
-      
-      unsigned char max = std::max(r, std::max(g, b));
-      unsigned char min = std::min(r, std::min(g, b));
-      
-      unsigned char chroma = max - min;
-      
-      // Hue
-      float hue_a = 0;
-      if (max == r)
-        hue_a = static_cast<float>(g - b) / chroma;
-      else if (max == g)
-        hue_a = 2 + static_cast<float>(b - r) / chroma;
-      else if (max == b)
-        hue_a = 4 + static_cast<float>(r - g) / chroma;
-      
-      int hue = 60 * hue_a;
-      if (hue < 0)
-        hue += 360;
-      
-      dst.SetPixel(x, y, 0, static_cast<unsigned char>(hue / 360.0 * 256));
-      
-      // Saturation
-      unsigned char saturation;
-      if (max == 0)
-        saturation = 0;
-      else
-        saturation = static_cast<unsigned char>(static_cast<float>(max - min) / max * 255);
-      
-      dst.SetPixel(x, y, 1, saturation);
-      
-      // Value
-      dst.SetPixel(x, y, 2, max);
-    }
-  }
-  
-  dst.SetColorModel(ImageBase::cm_HSV);
-}
+    const unsigned char *idaSrc = src.GetData();
+    unsigned char *idaDst = dst.GetData();
 
-void ColorConversion::ToRGB(const Image& src, Image& dst) {
-  if (src.GetColorModel() == ImageBase::cm_RGB || src.GetColorModel() == ImageBase::cm_Grey)
-    dst = src;
-
-  if (!src.Valid())
-    throw std::runtime_error("uninitialized image");
+    unsigned int xs=0;
+    unsigned int xd=0;
     
-  for (int x = 0; x < src.GetWidth(); x++) {
-    for (int y = 0; y < src.GetHeight(); y++) {
-      const float v = src.GetPixel(x, y, 2) / 255.0;
-      const float s = src.GetPixel(x, y, 1) / 255.0;
-      const float h = src.GetPixel(x, y, 0) / 256.0 * 360;
-      const int hi = static_cast<int>(h / 60.0);
-      const float f = h / 60.0 - hi;
+    while (xs<w*h*3) {
+      float p1, p2, p3, i, f;
+      float xh;
       
-      const float p = v * (1 - s);
-      const float q = v * (1 - s * f);
-      const float t = v * (1 - s * (1 - f));
+      // get old values and convert to float [0..1] (for hue it is [0..1) )
+      float h = (float)idaSrc[xs++] / 256.0f;
+      float s = (float)idaSrc[xs++] / 255.0f;
+      float v = (float)idaSrc[xs++] / 255.0f;
+
+      xh = h * 6.0f;                  /* convert hue to be in 0,6       */
+      i = (float)floor((double)xh);    /* i = greatest integer <= h    */
+      f = xh - i;                      /* f = fractional part of h     */
+      p1 = v * (1.0f - s);
+      p2 = v * (1.0f - (s * f));
+      p3 = v * (1.0f - (s * (1.0f - f)));
       
-      float r, g, b;
-      switch(hi) {
+      float r,g,b;
+      
+      switch ((int) i)
+      {
       case 0:
-      case 6:
-        r = v; g = t; b = p;
-        break;
+        r = v; g = p3;  b = p1; break;
       case 1:
-        r = q; g = v; b = p;
-        break;
+        r = p2; g = v;  b = p1; break;
       case 2:
-        r = p; g = v; b = t;
-        break;
+        r = p1; g = v;  b = p3; break;
       case 3:
-        r = p; g = q; b = v;
-        break;
+        r = p1; g = p2; b = v;  break;
       case 4:
-        r = t; g = p; b = v;
-        break;
+        r = p3; g = p1; b = v;  break;
       case 5:
-        r = v; g = p; b = q; 
-        break;
+        r = v; g = p1; b = p2; break;
       default:
-        throw std::runtime_error("invalid H value");
+        r = 0.0f; g = 0.0f; b = 0.0f;
+        break;
       }
       
-      dst.SetPixel(x, y, 0, r * 255);
-      dst.SetPixel(x, y, 1, g * 255);
-      dst.SetPixel(x, y, 2, b * 255);
+      /* Normalize the values to 255 */
+      r *= 255.0f;
+      g *= 255.0f;
+      b *= 255.0f;
+      idaDst[xd++] = (unsigned char)r;
+      idaDst[xd++] = (unsigned char)g;
+      idaDst[xd++] = (unsigned char)b;
     }
+    dst.SetColorModel(Image::cm_RGB);
+    return 0;
   }
   
-  dst.SetColorModel(ImageBase::cm_RGB);
+  int ColorConversion::ToHSV(const Image &src, Image &dst) {
+    if (src.GetColorModel() == Image::cm_HSV) {
+      // just copy to dst
+      dst = src;
+      return 0;
+    }
+    if (src.GetColorModel() == Image::cm_Grey) {
+      cout << "can not convert from grey to hsv" << endl;
+      return -1;
+    }
+    unsigned int w=src.GetWidth();
+    unsigned int h=src.GetHeight();
+    dst.Init(w,h);
+    
+    float hueSixth = 256.0f / 6.0f;
+    
+    const unsigned char *idaSrc = src.GetData();
+    unsigned char *idaDst = dst.GetData();
+
+    unsigned int xs=0;
+    unsigned int xd=0;
+    
+    while (xs<w*h*3) {
+
+      float r = (float)idaSrc[xs++] / 255.0f;
+      float g = (float)idaSrc[xs++] / 255.0f;
+      float b = (float)idaSrc[xs++] / 255.0f;
+      
+      float h,s,v;
+
+      float maxrgb = max(r, max(g, b));
+      float minrgb = min(r, min(g, b));
+
+      // hue
+      if (minrgb == maxrgb) {
+        h = 0.0f;
+      }
+      else if (maxrgb == r) {
+        h = hueSixth * ((g - b) / (maxrgb - minrgb));
+      }
+      else if (maxrgb == g) {
+        h = hueSixth * (2.0f + (b - r) / (maxrgb - minrgb));
+      }
+      else {
+        h = hueSixth * (4.0f + (r - g) / (maxrgb - minrgb));
+      }
+      if (h < 0.0f) {
+        h += 256.0f;
+      }
+
+      // sat
+      if (maxrgb == 0) {
+        s = 0.0f;
+      }
+      else {
+        s = 255.0f * (maxrgb - minrgb) / maxrgb;
+      }
+
+      // value
+      v = 255.0f * maxrgb;
+
+      idaDst[xd++] = (unsigned char)h;
+      idaDst[xd++] = (unsigned char)s;
+      idaDst[xd++] = (unsigned char)v;
+    }
+    dst.SetColorModel(Image::cm_HSV);
+
+    return 0;
+  }
+
+  int ColorConversion::ToGrey(const Image &src, Image &dst) {
+    if (src.GetColorModel() == Image::cm_Grey) {
+      cout << "grey already" << endl;
+      dst = src;
+      return 0;
+    }
+    if (src.GetColorModel() != Image::cm_RGB) {
+      ToRGB(src, dst);
+      return ToGrey(dst, dst);
+    }
+    // Y = 0.3 * R + 0.59 * G + 0.11 * B
+    unsigned int w=src.GetWidth();
+    unsigned int h=src.GetHeight();
+
+    dst.Init(w,h);
+    
+    const unsigned char *idaSrc = src.GetData();
+    unsigned char *idaDst = dst.GetData();
+
+    int d;
+    unsigned char dc;
+    unsigned int xs=0;
+    unsigned int xd=0;
+    while (xs<w*h*3) {
+      d=0;
+      d+= 30 * (int)idaSrc[xs++];
+      d+= 59 * (int)idaSrc[xs++];
+      d+= 11 * (int)idaSrc[xs++];
+      dc = (unsigned char)(d/100);
+      idaDst[xd++] = dc; 
+      idaDst[xd++] = dc; 
+      idaDst[xd++] = dc; 
+    }
+    dst.SetColorModel(Image::cm_Grey);
+    return 0;
+  }
+  
+  
 }

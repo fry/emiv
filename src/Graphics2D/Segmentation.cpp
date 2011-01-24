@@ -1,214 +1,232 @@
 #include <Graphics2D/Segmentation.hh>
 #include <Graphics2D/ColorConversion.hh>
 #include <Graphics2D/Filter.hh>
+#include <Graphics2D/PrimitivePoint.hh>
 
-using namespace Graphics2D;
+namespace Graphics2D {
 
-namespace {
-  inline int fmc(int fm) {
-    return (fm + 8) % 8;
-  }
-  
-  void get_fm(int code, int& dx, int& dy) {
-    code = fmc(code);
-    dx = 0; dy = 0;
-    switch(code) {
-      case 0:
-        dx = 1;
+  Segmentation::Segmentation(const Image &inputImage) {
+    width_ = inputImage.GetWidth();
+    height_ = inputImage.GetHeight();
+    
+    switch (inputImage.GetColorModel()) {
+      case ImageBase::cm_RGB:
+        ColorConversion::ToHSV(inputImage, hsvImage_);
+        labelImage_.Init(width_, height_);
+        labelImage_.SetColorModel(ImageBase::cm_Grey);
+        labelImage_.FillZero();
         break;
-      case 1:
-        dx = 1; dy = -1;
+      case ImageBase::cm_HSV:
+        hsvImage_ = inputImage;
+        labelImage_.Init(width_, height_);
+        labelImage_.SetColorModel(ImageBase::cm_Grey);
+        labelImage_.FillZero();
         break;
-      case 2:
-        dy = -1;
+      case ImageBase::cm_Grey:
+        labelImage_ = inputImage;
         break;
-      case 3:
-        dx = -1; dy = -1;
-        break;
-      case 4:
-        dx = -1;
-        break;
-      case 5:
-        dx = -1; dy = 1;
-        break;
-      case 6:
-        dy = 1;
-        break;
-      case 7:
-        dx = 1; dy = 1;
-        break;
+        
     }
   }
-}
 
-Segmentation::Segmentation(const Image &inputImage) {
-  hsvImage_.Init(inputImage.GetWidth(), inputImage.GetHeight());
-  labelImage_.Init(inputImage.GetWidth(), inputImage.GetHeight());
-  
-  const ImageBase::ColorModel cm = inputImage.GetColorModel();
-  if (cm == ImageBase::cm_RGB) {
-    ColorConversion::ToHSV(inputImage, hsvImage_);
-    labelImage_.FillZero();
-  } else if (cm == ImageBase::cm_HSV) {
-    hsvImage_ = inputImage;
-    labelImage_.FillZero();
-  } else {
-    labelImage_ = inputImage;
+  Segmentation::~Segmentation() {
+
   }
-  
-  labelImage_.SetColorModel(ImageBase::cm_Grey);
-}
 
-Segmentation::~Segmentation() {
-  
-}
-
-void Segmentation::AddHueSegment(const int label, const int minHue, const int maxHue, const int minSat) {
-  if (!hsvImage_.Valid())
-    return;
-
-  for (int x = 0; x < hsvImage_.GetWidth(); x++) {
-    for (int y = 0; y < hsvImage_.GetHeight(); y++) {
-      const int h = hsvImage_.GetPixel(x, y, 0);
-      const int s = hsvImage_.GetPixel(x, y, 1);
-      const int v = hsvImage_.GetPixel(x, y, 2);
-      
-      if (s >= minSat && h >= minHue && h <= maxHue) {
-        labelImage_.SetPixel(x, y, 0, label);
-        labelImage_.SetPixel(x, y, 1, label);
-        labelImage_.SetPixel(x, y, 2, label);
-      }
+  void Segmentation::AddHueSegment(const int label, const int minHue, const int maxHue, const int minSat) {
+    if (!hsvImage_.Valid()) {
+      std::cout << "input image is a label image already" << std::endl;
+      return;
     }
-  }
-}
-
-void Segmentation::ClosingOperation() {
-  Image tmp; tmp.Init(labelImage_.GetWidth(), labelImage_.GetHeight());
-  Filter::Rank3x3(labelImage_, tmp, 8);
-  Filter::Rank3x3(tmp, labelImage_, 0);
-}
-
-void Segmentation::GetLabelImage(Image &labelImage) {
-  labelImage = labelImage_;
-}
-
-int Segmentation::GetCenterAndArea(const int label, Coordinate &center, int &area) {
-  area = 0;
-  center = Coordinate();
-  for (int x = 0; x < labelImage_.GetWidth(); x++) {
-    for (int y = 0; y < labelImage_.GetHeight(); y++) {
-      const int current_label = labelImage_.GetPixel(x, y, 0);
-      if (current_label == label) {
-        center += Coordinate(x, y);
-        area ++;
+    int offset=0;
+    if (minHue>maxHue) {
+      offset = 255;
+    }
+    unsigned char *labels = labelImage_.GetData();
+    unsigned char *hsv = hsvImage_.GetData();
+    for (unsigned int x=0;x<width_*height_*3;x+=3) {
+      if (hsv[x+0]+offset >= minHue && hsv[x+0]+offset <= maxHue+offset && hsv[x+1]>=minSat) {
+        labels[x+0] = label;
+        labels[x+1] = label;
+        labels[x+2] = label;
       }
     }
   }
   
-  center *= 1.0f / area;
-}
+  void Segmentation::GetLabelImage(Image &labelImage) {
+    labelImage = labelImage_;
+  }
 
-int Segmentation::GetFreemanCode(const int label, const Coordinate &firstPoint, std::vector<int> &freemanCode) {
-  int cx = firstPoint.GetX();
-  int cy = firstPoint.GetY();
   
-  const int width = labelImage_.GetWidth();
-  const int height = labelImage_.GetHeight();
-  
-  const Color color = Color::red();
-  
-  // initial direction is south
-  int cb = 6;
-  // continue until we're at the starting pixel again
-  while (true) {
-    int ck, dx, dy;
-    // test pixels from right to left in the general direction
-    for (ck = cb - 1; ck <= cb + 1; ck++) {
-      // translate freeman code to direction and apply it
-      get_fm(ck, dx, dy);
-      const int px = cx + dx;
-      const int py = cy + dy;
-      // ensure bounds
-      if (px >= 0 && py >= 0 && px <= width && py <= height) {
-        // if a pixel matches the label, move to that pixel and abort
-        if (labelImage_.GetPixel(px, py, 0) == label) {
-          cx = px; cy = py;
-          break;
+  void Segmentation::ClosingOperation() {
+    Image tmp;
+    Filter::Rank3x3(labelImage_, tmp, 8);
+    Filter::Rank3x3(tmp, labelImage_, 0);
+  }
+
+  int Segmentation::GetCenterAndArea(int label, Coordinate &center, int &area) {
+    center.Set(0.0f,0.0f);
+    area = 0;
+    for (unsigned int y=0;y<height_;y++) {
+      for (unsigned int x=0;x<width_;x++) {
+        if (labelImage_.GetPixel(x,y,0) == label) {
+          area++;
+          center = center+Coordinate(x,y);
         }
       }
     }
-    
-    ck = fmc(ck);
-    
-    if (ck == cb || ck == fmc(cb + 1)) {
-      // matched pixel is forward or right, nothing needs to change
-      freemanCode.push_back(ck);
-    } else if (ck == fmc(cb - 1)) {
-      // pixel is left, turn left in addition to marking this pixel
-      cb -= 2;
-      freemanCode.push_back(ck);
+    if (area == 0) {
+      std::cout << "could not find pixels labeled " << label << std::endl; 
+      return 1;
     } else {
-      // no pixel found, turn right
-      cb += 2;
+      center = center * (1.0f/(float)area);
+      return 0;
     }
-    
-    cb = ((cb + 8) % 8);
-    
-    // abort if we reached the start
-    if (cx == firstPoint.GetX() && cy == firstPoint.GetY())
-      break;
   }
-}
-
-void Segmentation::DrawContourFreeman(const Coordinate& firstPoint, const std::vector<int> &freemanCode, 
-    const Color color, Image &targetImage) {
-  int cx = firstPoint.GetX();
-  int cy = firstPoint.GetY();
   
-  std::vector<int>::const_iterator iter, end;
-  end = freemanCode.end();
-  
-  // follow the contour code and fill the pixels with the specified color
-  for (iter = freemanCode.begin(); iter != end; ++iter) {
-    int dx, dy;
-    get_fm(*iter, dx, dy);
-    cx += dx; cy += dy;
-    
-    targetImage.SetPixel(cx, cy, 0, color.GetRed());
-    targetImage.SetPixel(cx, cy, 1, color.GetGreen());
-    targetImage.SetPixel(cx, cy, 2, color.GetBlue());
-  }
-}
-
-Coordinate Segmentation::GetLabelTopLeft(int label) {
-  // find the first pixel of the label from the top left
-  for (int y = 0; y < labelImage_.GetHeight(); y ++) {
-    for (int x = 0; x < labelImage_.GetWidth(); x ++) {
-      const int px = labelImage_.GetPixel(x, y, 0);
-      if (px == label) {
-        return Coordinate(x, y);
+  float Segmentation::GetCircumference(const std::vector<int> &freeman) {
+    float ret = 0;
+    float sqrt2 = sqrt(2.0); 
+    for (int i=0;i<(int)freeman.size();i++) {
+      if (freeman[i] % 2 == 0) {
+        ret++;
+      } else {
+        ret += sqrt2;
       }
     }
+    return ret;
   }
   
-  // precondition is that a top left point exists
-  assert(false);
-}
+  int Segmentation::GetFreemanCode(int label, Coordinate &firstPoint, std::vector<int> &freemanCode) {
+    
+    int searchDir = 6; // start south
+    
+    // find first
+    bool stop = false;
+    firstPoint.Set(-1,-1);
+    freemanCode.clear();
+    for (unsigned int y = 0; y < height_;y++) {
+      for (unsigned int x = 0; x < width_;x++) {
+        if (labelImage_.GetPixel(x,y,0) == label) {
+          firstPoint = Coordinate(x,y);
+          stop = true;
+          break;
+        }
+      }
+      if (stop) break;
+    }
+    if (firstPoint.x() == -1) {
+      std::cout << "could not find pixels labeled " << label << std::endl; 
+      return 1;
+    }
 
-float Segmentation::GetCircumference(const std::vector<int> &freeman) {
-  float circumference = 0;
-  const float sqrt2 = sqrt(2);
-  
-  std::vector<int>::const_iterator iter, end;
-  end = freeman.end();
-  
-  for (iter = freeman.begin(); iter != end; ++iter) {
-    circumference += *iter % 2 == 0 ? 1 : sqrt2;
+    std::vector<int> possibleDirs(3);
+    
+    Coordinate curPoint = firstPoint;
+    Coordinate nextPoint = Coordinate(-1,-1);
+    
+    while (nextPoint.x() != firstPoint.x() || nextPoint.y() != firstPoint.y()) {
+      
+      possibleDirs[0] = (searchDir - 1 + 8) % 8;
+      possibleDirs[1] = (searchDir    ) % 8;
+      possibleDirs[2] = (searchDir + 1) % 8;
+      
+      int contourDir = -1;
+      for (int i=0;i<3;i++) {
+        int x = curPoint.x();
+        int y = curPoint.y();
+        GetFreemanDirXY_(possibleDirs[i], x,y);
+        if (labelImage_.GetPixel(x,y,0) == label) {
+          nextPoint = Coordinate(x,y);
+          contourDir = possibleDirs[i];
+          break;
+        }
+      }
+      if (contourDir == searchDir || contourDir == (searchDir+1)%8) {
+        // searchDir stays same
+        curPoint = nextPoint;
+        freemanCode.push_back(contourDir);
+      } else if (contourDir == (searchDir - 1 + 8)%8) {
+        searchDir = (searchDir - 2 + 8) % 8;
+        curPoint = nextPoint;
+        freemanCode.push_back(contourDir);
+      } else {
+        searchDir = (searchDir + 2) % 8;
+      }
+    }
+
+    return 0;
   }
   
-  return circumference;
-}
+  
+  void Segmentation::DrawContourFreeman(const Coordinate firstPoint, const std::vector<int> &freemanCode, 
+      const Color color, Image &targetImage) {
+    PrimitivePoint p;
+    Coordinate coo = firstPoint;
+    p.SetCoordinate(coo);
+    p.SetColor(color);
+    p.Draw(&targetImage);
+    for (unsigned int i=0;i<freemanCode.size();i++) {
+      int x = coo.x();
+      int y = coo.y();
+      GetFreemanDirXY_(freemanCode[i], x, y);
+      coo.Set(x,y);
+      p.SetCoordinate(coo);
+      p.Draw(&targetImage);
+    }
+  }
+  
+  void Segmentation::GetAbsoluteCoordinates(const Coordinate &firstPoint, const std::vector<int> &freemanCode, 
+      std::vector<Coordinate> &coords) {
+    coords.clear();
+    coords.push_back(firstPoint);
+    Coordinate coo = firstPoint;
+    for (unsigned int i=0;i<freemanCode.size();i++) {
+      int x = coo.x();
+      int y = coo.y();
+      GetFreemanDirXY_(freemanCode[i], x, y);
+      coo.Set(x,y);
+      coords.push_back(coo);
+    }
+  }
 
-float Segmentation::GetRoundness(int area, float circumference) {
-  return (circumference * circumference) / area;
+
+  
+  int Segmentation::GetFreemanDirXY_(int dir, int &x, int &y) {
+    switch (dir) {
+      case 0: // east
+        x++;
+        break;
+      case 1: // north east
+        y--;
+        x++;
+        break;
+      case 2: // north
+        y--;
+        break;
+      case 3: // north west
+        y--;
+        x--;
+        break;
+      case 4: // west
+        x--;
+        break;
+      case 5: // south west
+        y++;
+        x--;
+        break;
+      case 6: // south
+        y++;
+        break;
+      case 7: // south east
+        x++;
+        y++;
+        break;
+      default:
+        std::cout << "non valid direction" << std::endl;
+        return 1;
+    }
+    return 0;
+  }
+
 }

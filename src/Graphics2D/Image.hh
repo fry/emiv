@@ -1,40 +1,38 @@
-// Gruppe 8
-// Serie 2
-// Alexander Koch, 773036
-// Eike Siewertsen, 847522
+/*
+ * Image Class implementing ImageBase
+ * @author fkellner, 10/10
+ */
 
-#ifndef IMAGE_HH
-#define IMAGE_HH
+#ifndef IMAGE_HH_
+#define IMAGE_HH_
 
 #include <Graphics2DBase/ImageBase.hh>
-#include <cassert>
 
 namespace Graphics2D {
-  class Image: public ImageBase {
-  public:
-    void FillZero();
-  
-    inline unsigned char GetPixel(const int &x, const int &y, const int &ch) const {
-      assert(ch >= 0 && ch <= 2);
-      assert(x >= 0 && x <= width_);
-      assert(y >= 0 && y <= height_);
 
-      return data_[(width_ * y + x) * 3 + ch];
-    }
+  class Image : public ImageBase {
+    public:
 
-    inline void SetPixel(const int &x, const int &y, const int &ch, const unsigned char &value) {
-      assert(ch >= 0 && ch <= 2);
-      assert(x >= 0 && x <= width_);
-      assert(y >= 0 && y <= height_);
+      Image();
+      
+      virtual ~Image();
+      
+      virtual void FillZero();
+      
+      virtual inline unsigned char GetPixel(const int &x, const int &y, const int &ch) const {
+        return data_[3*(y*width_+x)+ch];
+      }
+      
+      virtual inline void SetPixel(const int &x, const int &y, const int &ch, const unsigned char &value) {
+        data_[3*(y*width_+x)+ch] = value;
+      }
+      
+      virtual int LoadPPM(const std::string &filename);
+      virtual int SavePPM(const std::string &filename);
 
-      data_[(width_ * y + x) * 3 + ch] = value;
-    }
-
-    int LoadPPM(const std::string &filename);
-    int SavePPM(const std::string &filename);
+      
   };
+
 }
 
-
-#endif
-
+#endif /* IMAGE_HH_ */

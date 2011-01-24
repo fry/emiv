@@ -1,164 +1,154 @@
 #include <Graphics2D/PrimitivePolygon.hh>
-#include <Graphics2D/PrimitiveLine.hh>
+#include <vector>
+#include <algorithm>
 #include <Graphics2D/PrimitivePoint.hh>
 
-#include <Graphics2DBase/Coordinate.hh>
+namespace Graphics2D {
 
-#include <map>
-#include <list>
-#include <cmath>
+  PrimitivePolygon::PrimitivePolygon() {
+    name_ = "PrimitivePolygon";
+    closed_ = false;
+    coords_.clear();
+  }
 
-namespace {
-  struct line_data {
-    int y_min, y_max;
-    float x_min, inv_m;
-    bool vertical;
-    
-    line_data(const Graphics2D::Coordinate& start, const Graphics2D::Coordinate& end) {
-      const int sx = start.GetX();
-      const int sy = start.GetY();
-      const int ex = end.GetX();
-      const int ey = end.GetY();
-      int x_max;
+  PrimitivePolygon::~PrimitivePolygon() {
+    // TODO Auto-generated destructor stub
+  }
+  
+  void PrimitivePolygon::SetColor(const Color &color) {
+    color_ = color;
+    for (unsigned int i=0;i<lines_.size();i++) {
+      lines_[i].SetColor(color_);
+    }
+  }
 
-      vertical = (ex - sx) == 0;
-
-      // Find smallest y position
-      if (sy < ey) {
-        y_min = sy;
-        y_max = ey;
-        x_min = sx;
-        x_max = ex;
+  void PrimitivePolygon::SetCoordinates(const std::vector<Coordinate> &coords) {
+    if (coords.size() < 2) return;
+    coords_ = coords;
+    int csize = (int)coords_.size();
+    if (csize >= 3) {
+      if (coords_[0].Dist(coords_[csize-1])<20) {
+        closed_ = true;
+        coords_[csize-1] = coords[0];
       } else {
-        y_min = ey;
-        y_max = sy;
-        x_min = ex;
-        x_max = sx;
-      }
-
-      if (!vertical) {
-        // the x_max - x_min difference decides the sign of the slope
-        inv_m =  (x_max - x_min) / static_cast<float>(y_max - y_min);
+        closed_ = false;
       }
     }
-  };
-  
-  bool sort_x(const line_data& a, const line_data& b) {
-    return a.x_min < b.x_min;
-  }
-}
-
-namespace Graphics2D {
-  PrimitivePolygon::PrimitivePolygon(const Color& color): PrimitiveBase(color) {
-    name_ = "Polygon";
-  }
-  
-  PrimitivePolygon::PrimitivePolygon(const Color& color, const std::vector<Coordinate> points): PrimitiveBase(color) {
-    SetCoordinates(points);
+    lines_.resize(csize-1);
+    std::vector<Coordinate> coo(2);
+    for (int i=0;i<csize-1;i++) {
+      coo[0] = coords_[i];
+      coo[1] = coords_[i+1];
+      lines_[i].SetCoordinates(coo);
+      lines_[i].SetColor(color_);
+    }
+    if (closed_) {
+      coords_.pop_back();
+    }
   }
   
-  void PrimitivePolygon::SetCoordinates(const std::vector<Coordinate>& coordinates) {
-    if (coordinates.size() < 2)
-      throw std::runtime_error("A Polygon requires at least two points.");
-    
-    coordinates_ = coordinates;
+  void PrimitivePolygon::Rotate(float angle) {
+    if (!closed_) return;
+    // rotate using all coordinates
+    PrimitiveBase::Rotate(angle);
+    // update all lines
+    std::vector<Coordinate> coo(2);
+    int csize = (int)coords_.size();
+    for (int i=0;i<csize;i++) {
+      coo[0] = coords_[i];
+      coo[1] = coords_[(i+1)%csize];
+      lines_[i].SetCoordinates(coo);
+    }
   }
   
   void PrimitivePolygon::Draw(ImageBase *im) {
-    // Draw the line strip from start to the last point
-    /*for (int i = 0; i < coordinates_.size() - 1; i++) {
-      PrimitiveLine line(GetColor(), coordinates_[i], coordinates_[i + 1]);
-      line.Draw(im);
+    if (coords_.size() < 2) return;
+    if (closed_) {
+      // all closed polygons are flood filled with scanline algorithm
+      ScanlineFill_(im);
+    } else {
+      for (unsigned int i=0;i<lines_.size();i++) {
+        lines_[i].Draw(im);
+      }
     }
-    
-    // Draw another line from end to start
-    PrimitiveLine line(GetColor(), coordinates_[coordinates_.size() - 1], coordinates_[0]);
-    line.Draw(im);*/
-    
-    // Fill polygon
-    ScanlineFill(im);
   }
+
   
-  void PrimitivePolygon::ScanlineFill(ImageBase* im) {
-    typedef std::multimap<int, line_data> table_type;
-    typedef std::pair<int, line_data> pair_type;
-    table_type edge_table;
+  void PrimitivePolygon::ScanlineFill_(ImageBase *im) {
+    
+    int w = (int)im->GetWidth();
+    int h = (int)im->GetHeight();
+    unsigned char *data = im->GetData();
 
-    // Draw the line strip from start to the last point
-    for (int i = 0; i < coordinates_.size() - 1; i++) {
-      line_data line(coordinates_[i], coordinates_[i + 1]);
-      edge_table.insert(pair_type(line.y_min, line));
-    }
+    // our lines_ vector is the edgetable, this local copy is just to make 
+    // the algorithm more understandable
+    std::vector<PrimitiveLine> edgeTable;
+    edgeTable = lines_;
+    // currently active edges
+    std::vector<PrimitiveLine> activeTable;
+    activeTable.clear();
     
-    // Draw another line from end to start
-    line_data line(coordinates_[coordinates_.size() - 1], coordinates_[0]);
-    edge_table.insert(pair_type(line.y_min, line));
+    // sort edges by miny
+    std::sort(edgeTable.begin(), edgeTable.end(), PrimitiveLine::CompareYmin);
     
-    // Start at the smallest line
-    int y = edge_table.begin()->first;
+    // we start at lowest y
+    int y = edgeTable[0].ymin();
     
-    // active edge table
-    std::list<line_data> active_edge_table;
-    std::list<line_data>::iterator aet_iter, aet_end;
-    aet_end = active_edge_table.end();
-    
-    // Set up edge_table iterators
-    table_type::iterator iter, end;
-    std::pair<table_type::iterator, table_type::iterator> results;
-    end = edge_table.end();
-    
-    // the point to draw for lines
-    PrimitivePoint point(GetColor());
-    while (!edge_table.empty() || !active_edge_table.empty()) {
-      // add lines starting here
-      results = edge_table.equal_range(y);
-      for (iter = results.first; iter != results.second; ++iter) {
-        active_edge_table.push_back(iter->second);
+    // iterate y
+    do {
+
+      // edges become active if their ymin == y
+      for (unsigned int i=0;i<edgeTable.size();i++) {
+        if (edgeTable[i].MakeActive(y)) {
+          activeTable.push_back(edgeTable[i]);
+        }
       }
       
-      // remove them from the edge table
-      edge_table.erase(results.first, results.second);
+      // clear inactive edges from active edge list
       
-      // sort active edge table
-      active_edge_table.sort(::sort_x);
+      // iterate through active edge list
+      std::vector<PrimitiveLine>::iterator iter = activeTable.begin();
       
-      // for each active line, go through the sorted intersections, counting parity
-      int parity = 0;
-      int last_x = 0;
-      for (aet_iter = active_edge_table.begin(); aet_iter != aet_end; ) {
-        // Round down intersection point
-        int intersect_x = (int)aet_iter->x_min;
-        
-        // Draw a horizontal line once we hit a second intersection
-        if (parity % 2 != 0) {
-          for (int x = last_x; x <= intersect_x; x++) {
-            point.SetCoordinate(Coordinate(x, y));
-            point.Draw(im);
-          }
-        }
-        
-        // Don't count intersection if it's on y_max (to avoid problems with two meeting lines)
-        if (y != aet_iter->y_max)
-          parity ++;
-
-        last_x = intersect_x;
-        
-        // remove element if it is leaving the interesting area, otherwise update x
-        if (aet_iter->y_max == y) {
-          aet_iter = active_edge_table.erase(aet_iter);
+      while (iter != activeTable.end()) {
+        if (iter->MakeInactive(y)) {
+          // if y == ymax, an edge is marked inactive
+          // erase(iter) returns a valid iterator to element after removed one 
+          iter = activeTable.erase( iter );
         } else {
-          // update line position if the line is not vertical
-          if (!aet_iter->vertical) {
-            aet_iter->x_min += aet_iter->inv_m;
-          }
-        
-          // increment iterator if we didn't remove an element
-          ++aet_iter;
+          // keep active edges
+          iter++;
         }
       }
       
-      // continue with next line
-      y ++;
-    }
+      // only try drawing if inside image
+      if (y>=0 && y<h) {
+      
+        // sort intersections of active edges
+        std::sort(activeTable.begin(), activeTable.end(), PrimitiveLine::CompareIntersection);
+        
+        // we might draw something if there is two intersections at least
+        if (activeTable.size()>=2 && activeTable.size()%2==0) {
+          // draw spans
+          for (unsigned int idx = 0; idx < activeTable.size()-1; idx+=2) {
+            int xmin = std::max(0,activeTable[idx].intersection());
+            int xmax = std::min(w-1,activeTable[idx+1].intersection());
+            for (int x=xmin;x<=xmax;x++) {
+              data[(y*w+x)*3+0] = color_.r();
+              data[(y*w+x)*3+1] = color_.g();
+              data[(y*w+x)*3+2] = color_.b();
+            }
+          }
+        }
+      }
+      
+      // increase y
+      y++;
+      
+      // on each increasing y, the intersection is updated according to slope
+      for (unsigned int j=0;j<activeTable.size();j++) {
+        activeTable[j].UpdateIntersection();
+      }
+
+    } while (!edgeTable.empty() && !activeTable.empty());
   }
 }
