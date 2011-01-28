@@ -59,6 +59,7 @@ namespace Graphics2D {
       
       /// image representation of 2d hough histogram
       FloatImage houghspace_;
+      int resolution_;
   };
 
 }
