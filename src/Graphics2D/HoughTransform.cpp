@@ -1,4 +1,5 @@
 #include <Graphics2D/HoughTransform.hh>
+#include <cmath>
 
 using namespace std;
 
@@ -14,38 +15,27 @@ namespace Graphics2D {
 
   
   void HoughTransform::StandardHoughTransform(const Image &input, const int resolution, vector<PrimitiveLine> &lines) {
+    resolution_ = resolution;
     Create2DHistogram_(input, resolution);
     Filter::NonMaximumSuppression(houghspace_, houghspace_, 254);
-    Image out(input);
-    Image test;
-    houghspace_.GetAsGreyImage(test);
-    test.SavePPM("houghspace.ppm");
     GetLines_(input.GetWidth(), input.GetHeight(), lines);
-    for(std::vector<PrimitiveLine>::iterator iter=lines.begin(); iter != lines.end(); ++iter) {
-      iter->SetColor(Color::red());
-      iter->Draw(&out);
-    }
-    out.SavePPM("test.ppm");
-    // call Create2DHistogram_
-    // apply non maximum suppression
-    // save houghimage for debugging (optional)
-    // call GetLines_
   }
 
   void HoughTransform::FastHoughTransform(const StructureTensor &input, const int resolution, vector<PrimitiveLine> &lines) {
+    resolution_ = resolution;
     // call Create2DHistogramFromStructureTensor_
+  	Create2DHistogramFromStructureTensor_(input, resolution);
     // apply non maximum suppression
-    // save hough image for debugging (optional)
-    // call GetLines_ (extend StructureTensor class for getting width and height)
-  }
+  	Filter::NonMaximumSuppression(houghspace_, houghspace_, 20);
+    GetLines_(input.GetWidth(), input.GetHeight(), lines);
+   }
 
   // ---- protected
   
   void HoughTransform::Create2DHistogram_(const Image &input, const int resolution) {
-    resolution_ = resolution;
+    houghspace_.FillZero();
     
     Image borders;
-    
     // filter input image to detect borders
     Filter::GradMag(input, borders);
     
@@ -57,7 +47,7 @@ namespace Graphics2D {
     const int max_d = rint(std::sqrt(width*width + height*height));
     const int half_d = max_d / 2;
     // resolution of degrees
-    const int size_deg = static_cast<int>(180 * resolution);
+    const int size_deg = 180 * resolution;
 
     // size of houghspace
     houghspace_.Init(size_deg, max_d);
@@ -81,13 +71,52 @@ namespace Graphics2D {
         }
       }
     }
+    
+    Image out;
+    houghspace_.GetAsGreyImage(out);
+    out.SavePPM("houghspace.ppm");
   }
   
   void HoughTransform::Create2DHistogramFromStructureTensor_(const StructureTensor &input, const int resolution) {
-    // get elements of structure tensor  (extend StructureTensor class for getting Jxx, Jxy, Jyy)
-    // calculate hough transform using structure tensor orientation
-    // consider needed size for 2d histogram!
-    // save hough image for debugging
+    houghspace_.FillZero();
+    
+    // get elements of structure tensor
+	  FloatImage Jxx,Jxy,Jyy;
+  	input.GetStructureTensor(Jxx,Jxy,Jyy);
+  	//calculate needed size of houghspace_
+  	const int width = input.GetWidth();
+    const int height = input.GetHeight();
+	  const float center_x = width / 2.0f;
+    const float center_y = height / 2.0f;
+	  const int size_deg = 180 * resolution;
+  	const int max_d = rint(std::sqrt(width*width + height*height));
+  	const int half_d = max_d/2;
+    houghspace_.Init(size_deg, max_d);
+    double min=0,max=0;
+  	// calculate hough transform using structure tensor orientation
+  	for (int x=0; x < width; x++) {
+    	for (int y=0; y < height; y++) {
+    		float jxx = Jxx.GetPixel(x,y);
+    		float jxy = Jxy.GetPixel(x,y);
+    		float jyy = Jyy.GetPixel(x,y);
+        // check if we have an edge by using the trace
+    		if ( (jxx + jyy) > 0) { 				
+    			// calculate degrees from orientation vector, combine both 180 degree halfs (abs)
+    			const double deg = std::abs(atan2(jyy-jxx, 2*jxy));
+    			//calculate distance (as above)
+    			const int d = rint(std::cos(deg) * (x - center_x) + std::sin(deg) * (y - center_y)) + half_d;
+    			//calculate the bucket to choose
+    			int bucket = static_cast<int>(deg*180*resolution/M_PI);
+    			// increase amount of lines by one
+    			const float new_val = houghspace_.GetPixel(bucket, d) + 1;
+    			houghspace_.SetPixel(bucket, d, new_val);
+  		  } 
+    	}
+    }
+    
+    Image out;
+    houghspace_.GetAsGreyImage(out);
+    out.SavePPM("houghspace_st.ppm");
   }
 
   
@@ -104,7 +133,8 @@ namespace Graphics2D {
           const float degrees = deg / (resolution_ * 180.0f) * M_PI;
           // line dist is encoded in positive numbers, decode it
           const float real_d = dist - max_d/2;
-          // first consider non-vertical lines (degrees != 0Â° && != 90Â°)
+          std::cout << "line: " << real_d << "," << (float)deg/resolution_ << std::endl;
+          // first consider non-vertical lines (degrees != 0° && != 90°)
           if (deg != 0 && deg != 180 * resolution_) {
             // calculate inclination of line
             float m = - std::cos(degrees) / std::sin(degrees);
@@ -112,14 +142,13 @@ namespace Graphics2D {
             // in the center, so we have to translate everything accordingly
             // calculate y axis cross section and translate to top left origin
             float b =  real_d / std::sin(degrees) + imHeight/2;
-            // handle horizontal lines (sin(0Â°) == 0, so m = -inf)
+            // handle horizontal lines (sin(0°) == 0, so m = -inf)
             if (deg == 90 * resolution_)
               m = 0;
 
             // the y axis cross section is with the y axis in the middle of the screen
             // so we have to go back half the width to get the y position of the line
             // in our top left system
-            // this gave us quite a headache
             points.push_back(Coordinate(0, b + -(imWidth/2) * m));
             points.push_back(Coordinate(imWidth, b + (imWidth/2) * m));
           } else {
