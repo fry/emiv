@@ -17,8 +17,9 @@ namespace Graphics2D {
     Create2DHistogram_(input, resolution);
     Filter::NonMaximumSuppression(houghspace_, houghspace_, 254);
     Image out(input);
-    /*houghspace_.GetAsGreyImage(out);
-    out.SavePPM("houghspace.ppm");*/
+    Image test;
+    houghspace_.GetAsGreyImage(test);
+    test.SavePPM("houghspace.ppm");
     GetLines_(input.GetWidth(), input.GetHeight(), lines);
     for(std::vector<PrimitiveLine>::iterator iter=lines.begin(); iter != lines.end(); ++iter) {
       iter->SetColor(Color::red());
@@ -91,29 +92,48 @@ namespace Graphics2D {
 
   
   void HoughTransform::GetLines_(int imWidth, int imHeight, std::vector<PrimitiveLine> &lines) {
-    std::vector<Coordinate> points;
-    const int max_d = houghspace_.GetHeight();
+    std::vector<Coordinate> points; points.reserve(2);
+    const int max_d = rint(std::sqrt(imWidth * imWidth + imHeight * imHeight));
+    
     for (int deg = 0; deg < houghspace_.GetWidth(); deg++) {
-      for (int dist = 0; dist < max_d; dist++) {
+      for (int dist = 0; dist < houghspace_.GetHeight(); dist++) {
         const float val = houghspace_.GetPixel(deg, dist);
-        if (val > 0 && deg != 0) {
-          std::cout << dist << std::endl;
+        if (val > 0) {
+          points.clear();
+          // convert degrees to radian
           const float degrees = deg / (resolution_ * 180.0f) * M_PI;
-          const float m = - std::cos(degrees) / std::sin(degrees);
-          const float b = dist / std::sin(degrees);
+          // line dist is encoded in positive numbers, decode it
+          const float real_d = dist - max_d/2;
+          // first consider non-vertical lines (degrees != 0° && != 90°)
+          if (deg != 0 && deg != 180 * resolution_) {
+            // calculate inclination of line
+            float m = - std::cos(degrees) / std::sin(degrees);
+            // the hough space image we get is built on an image with its origin 
+            // in the center, so we have to translate everything accordingly
+            // calculate y axis cross section and translate to top left origin
+            float b =  real_d / std::sin(degrees) + imHeight/2;
+            // handle horizontal lines (sin(0°) == 0, so m = -inf)
+            if (deg == 90 * resolution_)
+              m = 0;
+
+            // the y axis cross section is with the y axis in the middle of the screen
+            // so we have to go back half the width to get the y position of the line
+            // in our top left system
+            // this gave us quite a headache
+            points.push_back(Coordinate(0, b + -(imWidth/2) * m));
+            points.push_back(Coordinate(imWidth, b + (imWidth/2) * m));
+          } else {
+            // handle vertical lines, translate them to the correct coordinate system
+            points.push_back(Coordinate(real_d + imWidth/2, 0));
+            points.push_back(Coordinate(real_d + imWidth/2, imHeight));
+          }
           
           PrimitiveLine line;
-          points.clear();
-          points.push_back(Coordinate(0, b));
-          points.push_back(Coordinate(imWidth, m * imWidth + b));
+
           line.SetCoordinates(points);
           lines.push_back(line);
         }
       }
     }
-    // for each pixel != 0 in hough space 
-    // calculate a line from one image border to another
-    // by calculating the intersection points with the image borders
-    // consider vertical/horizontal lines, you might need to consider different cases
   }
 }

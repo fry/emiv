@@ -11,7 +11,7 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
   
-  Filter *mean = Filter::CreateMean(5,5);
+  Filter *mean = Filter::CreateMean(3,3);
 //  Filter *mean = NULL;
   
   int w = 1024;
