@@ -29,11 +29,11 @@ namespace Graphics2D {
       double Dist(const Coordinate &other) const;
       
       // operators for adding/substracting another coordinate
-      Coordinate operator+(const Coordinate &other);
-      Coordinate operator-(const Coordinate &other);
+      Coordinate operator+(const Coordinate &other) const;
+      Coordinate operator-(const Coordinate &other) const;
       // multiplication with scalar
-      Coordinate operator*(float scalar);
-      float operator*(const Coordinate& other);
+      Coordinate operator*(float scalar) const;
+      float operator*(const Coordinate& other) const;
       
       // rotate coordinate around origin with angle in radians
       void Rotate(const Coordinate &origin, float angle);

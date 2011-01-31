@@ -7,13 +7,13 @@ namespace Graphics2D {
     return sqrt((x_-other.x_)*(x_-other.x_)+(y_-other.y_)*(y_-other.y_));
   }
 
-  Coordinate Coordinate::operator+(const Coordinate &other) {
+  Coordinate Coordinate::operator+(const Coordinate &other) const {
     return Coordinate(x_+other.x_, y_+other.y_);
   }
-  Coordinate Coordinate::operator-(const Coordinate &other) {
+  Coordinate Coordinate::operator-(const Coordinate &other) const {
     return Coordinate(x_-other.x_, y_-other.y_);
   }
-  Coordinate Coordinate::operator*(float scalar) {
+  Coordinate Coordinate::operator*(float scalar) const {
     return Coordinate(x_*scalar, y_*scalar);
   }
   
@@ -23,7 +23,7 @@ namespace Graphics2D {
     y_ = ((sin(angle)*shifted.x_ + cos(angle)*shifted.y_)) + origin.y();
   }
 
-  float Coordinate::operator*(const Coordinate& other) {
+  float Coordinate::operator*(const Coordinate& other) const {
     return x_ * other.x_ + y_ * other.y_;
   }
   
