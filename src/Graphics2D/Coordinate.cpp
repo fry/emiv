@@ -1,4 +1,5 @@
 #include <Graphics2D/Coordinate.hh>
+#include <iostream>
 
 namespace Graphics2D {
 
@@ -22,4 +23,11 @@ namespace Graphics2D {
     y_ = ((sin(angle)*shifted.x_ + cos(angle)*shifted.y_)) + origin.y();
   }
 
+  float Coordinate::operator*(const Coordinate& other) {
+    return x_ * other.x_ + y_ * other.y_;
+  }
+  
+  float Coordinate::Length() {
+    return std::sqrt(x_*x_ + y_*y_);
+  }
 }

@@ -1,166 +1,203 @@
+
 #include <Graphics2D/HoughTransform.hh>
-#include <cmath>
+#include <Graphics2D/Filter.hh>
 
 using namespace std;
 
 namespace Graphics2D {
 
   HoughTransform::HoughTransform() {
-    // nothing
+    // TODO Auto-generated constructor stub
+
   }
 
   HoughTransform::~HoughTransform() {
-    // nothing
+    // TODO Auto-generated destructor stub
   }
 
   
   void HoughTransform::StandardHoughTransform(const Image &input, const int resolution, vector<PrimitiveLine> &lines) {
-    resolution_ = resolution;
     Create2DHistogram_(input, resolution);
-    Filter::NonMaximumSuppression(houghspace_, houghspace_, 254);
+    Filter::NonMaximumSuppression(houghspace_, houghspace_, 100, 21);
+    Image test;
+    houghspace_.GetAsGreyImage(test);
+    test.SavePPM("houghsimplemax.ppm");
     GetLines_(input.GetWidth(), input.GetHeight(), lines);
   }
 
   void HoughTransform::FastHoughTransform(const StructureTensor &input, const int resolution, vector<PrimitiveLine> &lines) {
-    resolution_ = resolution;
-    // call Create2DHistogramFromStructureTensor_
-  	Create2DHistogramFromStructureTensor_(input, resolution);
-    // apply non maximum suppression
-  	Filter::NonMaximumSuppression(houghspace_, houghspace_, 20);
+    Create2DHistogramFromStructureTensor_(input, resolution);
+    Filter::NonMaximumSuppression(houghspace_, houghspace_, 10, 21);
+    Image test;
+    houghspace_.GetAsGreyImage(test);
+    test.SavePPM("houghfastmax.ppm");
     GetLines_(input.GetWidth(), input.GetHeight(), lines);
-   }
+  }
 
   // ---- protected
   
   void HoughTransform::Create2DHistogram_(const Image &input, const int resolution) {
+    int w = (int)input.GetWidth();
+    int h = (int)input.GetHeight();
+    
+    int angleBins = 180 * resolution;
+    int maxDistance = (int)(ceil(sqrt(w*w+h*h)))/2;
+    
+    float binToRadians = M_PI / (180.0f * resolution);
+    
+    houghspace_.Init(angleBins, maxDistance*2);
     houghspace_.FillZero();
     
-    Image borders;
-    // filter input image to detect borders
-    Filter::GradMag(input, borders);
+    Image magnitude;
+    magnitude.Init(w,h);
+    magnitude.FillZero();
+    Filter::GradMag(input, magnitude);
+    magnitude.SavePPM("gradmag.ppm");
     
-    const int width = input.GetWidth();
-    const int height = input.GetHeight();
-    const float center_x = width / 2.0;
-    const float center_y = height / 2.0;
-    // calculate the maximum distance of a line from the center (half_d)
-    const int max_d = rint(std::sqrt(width*width + height*height));
-    const int half_d = max_d / 2;
-    // resolution of degrees
-    const int size_deg = 180 * resolution;
+    unsigned char *magdata = magnitude.GetData();
+    
+    int xoffs = w/2;
+    int yoffs = h/2;
 
-    // size of houghspace
-    houghspace_.Init(size_deg, max_d);
+    for (int y=1;y<h-1;y++) {
+      for (int x=1;x<w-1;x++) {
+        
+        int idx = y*w+x;
 
-    const float deg_factor = 1.0f / resolution * M_PI / 180.0f;
-    for (int x=0; x < width; x++) {
-      for (int y=0; y < height; y++) {
-        // only consider borders
-        const int magn = borders.GetPixel(x, y, 0);
-        if (magn > 0) {
-          // draw a line in houghspace for every possible line through this point
-          for (int step=0; step < size_deg; step++) {
-            // calculate degrees from discrete degree step
-            const float deg = step * deg_factor;
-            // calculate line distance from center and translate it into a positive area
-            const int d = rint(std::cos(deg) * (x - center_x) + std::sin(deg) * (y - center_y)) + half_d;
-            // increase amount of lines by one
-            const float new_val = houghspace_.GetPixel(step, d) + 1;
-            houghspace_.SetPixel(step, d, new_val);
+        float mag = magdata[idx*3];
+
+        if (mag > 100) {
+          for (int i=0;i<angleBins;i++) {
+            
+            float phi = (float)(i)*binToRadians;
+            
+            float d = (x-xoffs)*cos(phi)+(y-yoffs)*sin(phi) + maxDistance;
+            houghspace_.SetPixel(i, (int)d, houghspace_.GetPixel(i,(int)d)+1);
           }
         }
       }
     }
     
-    Image out;
-    houghspace_.GetAsGreyImage(out);
-    out.SavePPM("houghspace.ppm");
+    Image test;
+    houghspace_.GetAsGreyImage(test);
+    test.SavePPM("houghsimple.ppm");
+    
   }
   
   void HoughTransform::Create2DHistogramFromStructureTensor_(const StructureTensor &input, const int resolution) {
-    houghspace_.FillZero();
     
-    // get elements of structure tensor
-	  FloatImage Jxx,Jxy,Jyy;
-  	input.GetStructureTensor(Jxx,Jxy,Jyy);
-  	//calculate needed size of houghspace_
-  	const int width = input.GetWidth();
-    const int height = input.GetHeight();
-	  const float center_x = width / 2.0f;
-    const float center_y = height / 2.0f;
-	  const int size_deg = 180 * resolution;
-  	const int max_d = rint(std::sqrt(width*width + height*height));
-  	const int half_d = max_d/2;
-    houghspace_.Init(size_deg, max_d);
-    double min=0,max=0;
-  	// calculate hough transform using structure tensor orientation
-  	for (int x=0; x < width; x++) {
-    	for (int y=0; y < height; y++) {
-    		float jxx = Jxx.GetPixel(x,y);
-    		float jxy = Jxy.GetPixel(x,y);
-    		float jyy = Jyy.GetPixel(x,y);
-        // check if we have an edge by using the trace
-    		if ( (jxx + jyy) > 0) { 				
-    			// calculate degrees from orientation vector, combine both 180 degree halfs (abs)
-    			const double deg = std::abs(atan2(jyy-jxx, 2*jxy));
-    			//calculate distance (as above)
-    			const int d = rint(std::cos(deg) * (x - center_x) + std::sin(deg) * (y - center_y)) + half_d;
-    			//calculate the bucket to choose
-    			int bucket = static_cast<int>(deg*180*resolution/M_PI);
-    			// increase amount of lines by one
-    			const float new_val = houghspace_.GetPixel(bucket, d) + 1;
-    			houghspace_.SetPixel(bucket, d, new_val);
-  		  } 
-    	}
+    FloatImage Jxx, Jyy, Jxy;
+    input.GetStructureTensor(Jxx, Jxy, Jyy);
+    
+    int w = (int)input.GetWidth();
+    int h = (int)input.GetHeight();
+    
+    int angleBins = 180 * resolution;
+    int maxDistance = (int)(ceil(sqrt(w*w+h*h)))/2;
+    
+    float radiansTobin = (180.0f * resolution) / M_PI;
+    
+    houghspace_.Init(angleBins, maxDistance*2);
+    houghspace_.FillZero();
+
+    float *gxxdata = Jxx.GetData();
+    float *gxydata = Jxy.GetData();
+    float *gyydata = Jyy.GetData();
+
+    int xoffs = w/2;
+    int yoffs = h/2;
+
+    float meantrace=0.0f;
+    for (int y=0;y<h;y++) {
+      for (int x=0;x<w;x++) {
+        int idx = y*w+x;
+        meantrace+=gxxdata[idx]+gyydata[idx];
+      }
+    }
+    meantrace/=(float)(w*h);
+    
+    for (int y=0;y<h;y++) {
+      for (int x=0;x<w;x++) {
+        
+        int idx = y*w+x;
+
+        if (gxxdata[idx]+gyydata[idx] > meantrace) {
+          
+          float phi = atan(2*gxydata[idx]/(gyydata[idx]-gxxdata[idx]))/2.0;
+  
+          if (gxxdata[idx]-gyydata[idx]>=0) { 
+            phi= -phi+M_PI;
+          } else {
+            phi = -phi+M_PI/2;
+          }
+          if (phi>M_PI) phi-=M_PI;
+          if (phi<0) phi+=M_PI;
+          
+          float d = (x-xoffs)*cos(phi)+(y-yoffs)*sin(phi) + maxDistance;
+          int i = (int)rint(phi*radiansTobin);
+          
+          houghspace_.SetPixel(i, (int)d, houghspace_.GetPixel(i,(int)d)+1);
+        }
+      }
     }
     
-    Image out;
-    houghspace_.GetAsGreyImage(out);
-    out.SavePPM("houghspace_st.ppm");
+    Image test;
+    houghspace_.GetAsGreyImage(test);
+    test.SavePPM("houghfast.ppm");
+
   }
 
   
   void HoughTransform::GetLines_(int imWidth, int imHeight, std::vector<PrimitiveLine> &lines) {
-    std::vector<Coordinate> points; points.reserve(2);
-    const int max_d = rint(std::sqrt(imWidth * imWidth + imHeight * imHeight));
+    lines.clear();
     
-    for (int deg = 0; deg < houghspace_.GetWidth(); deg++) {
-      for (int dist = 0; dist < houghspace_.GetHeight(); dist++) {
-        const float val = houghspace_.GetPixel(deg, dist);
-        if (val > 0) {
-          points.clear();
-          // convert degrees to radian
-          const float degrees = deg / (resolution_ * 180.0f) * M_PI;
-          // line dist is encoded in positive numbers, decode it
-          const float real_d = dist - max_d/2;
-          std::cout << "line: " << real_d << "," << (float)deg/resolution_ << std::endl;
-          // first consider non-vertical lines (degrees != 0° && != 90°)
-          if (deg != 0 && deg != 180 * resolution_) {
-            // calculate inclination of line
-            float m = - std::cos(degrees) / std::sin(degrees);
-            // the hough space image we get is built on an image with its origin 
-            // in the center, so we have to translate everything accordingly
-            // calculate y axis cross section and translate to top left origin
-            float b =  real_d / std::sin(degrees) + imHeight/2;
-            // handle horizontal lines (sin(0°) == 0, so m = -inf)
-            if (deg == 90 * resolution_)
-              m = 0;
+    int angleBins = (int)houghspace_.GetWidth();
+    int maxDistance = (int)houghspace_.GetHeight()/2;
+    
+    int resolution = angleBins / 180;
+    
+    float binToRadians = M_PI / (180.0f * resolution);
+    
+    int xoffs = imWidth/2;
+    int yoffs = imHeight/2;
 
-            // the y axis cross section is with the y axis in the middle of the screen
-            // so we have to go back half the width to get the y position of the line
-            // in our top left system
-            points.push_back(Coordinate(0, b + -(imWidth/2) * m));
-            points.push_back(Coordinate(imWidth, b + (imWidth/2) * m));
+
+    for (int y=0;y<maxDistance*2;y++) {
+      for (int x=0;x<angleBins;x++) {
+        if (houghspace_.GetPixel(x,y)>50) {
+          float angle = float(x)*binToRadians-M_PI/2;
+          if (angle>-M_PI/4 && angle<M_PI/4) {
+            float distance = float(y) - maxDistance;
+//            cout << angle*180.0f/M_PI<< "  - blub1 " << angle << " - weight:" << houghspace_.GetPixel(x,y) << endl;
+            vector<Coordinate> coords(2);
+            PrimitiveLine pl;
+            pl.SetColor(Color::blue());
+            
+            double m = tan(angle);
+            double b = (distance) / cos(angle) + yoffs;
+
+            cout << "mx: " << m << " b " << b << endl;
+            coords[0] = Coordinate(0,-xoffs*m+b);
+            coords[1] = Coordinate(imWidth, xoffs*m+b);
+            pl.SetCoordinates(coords);
+            lines.push_back(pl);
           } else {
-            // handle vertical lines, translate them to the correct coordinate system
-            points.push_back(Coordinate(real_d + imWidth/2, 0));
-            points.push_back(Coordinate(real_d + imWidth/2, imHeight));
-          }
-          
-          PrimitiveLine line;
+            float distance = float(y) - maxDistance;
+//            cout << angle*180.0f/M_PI<< "  - blub2 " << angle << " - weight:" << houghspace_.GetPixel(x,y) << endl;
+            vector<Coordinate> coords(2);
+            PrimitiveLine pl;
+            pl.SetColor(Color::yellow());
+            
+            double m = -tan(angle+M_PI/2);
+            double b = (distance) / cos(angle+M_PI/2) + xoffs;
+            cout << "my: " << m << " b " << b << "  distance:" << distance << endl;
 
-          line.SetCoordinates(points);
-          lines.push_back(line);
+            coords[0] = Coordinate(-yoffs*m+b,0);
+            coords[1] = Coordinate(yoffs*m+b,imHeight);
+            pl.SetCoordinates(coords);
+            lines.push_back(pl);
+
+          }
         }
       }
     }

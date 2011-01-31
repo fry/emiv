@@ -3,6 +3,7 @@
 #include <Graphics2D/Image.hh>
 #include <Graphics2DBase/FloatImage.hh>
 #include <Graphics2D/Filter.hh>
+#include <Graphics2D/Coordinate.hh>
 
 namespace Graphics2D {
 
@@ -15,7 +16,7 @@ namespace Graphics2D {
       
       void FoerstnerDetector(float thres, Image &corners);
       
-      void HarrisCornerDetector(Image &corners);
+      void HarrisCornerDetector(std::vector<Coordinate>& corners);
       
       inline void GetStructureTensor(FloatImage &Jxx, FloatImage &Jxy, FloatImage &Jyy) const {
         Jxx = gxx_;

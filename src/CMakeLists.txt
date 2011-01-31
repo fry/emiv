@@ -41,3 +41,6 @@ target_link_libraries(generateHoughTestImages Graphics2D)
 
 add_executable(houghTransform houghTransform.cpp)
 target_link_libraries(houghTransform Graphics2D)
+
+add_executable(testLines testLines.cpp)
+target_link_libraries(testLines Graphics2D)

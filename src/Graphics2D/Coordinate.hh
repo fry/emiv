@@ -22,6 +22,9 @@ namespace Graphics2D {
       inline int x() const {return (int)rint(x_);} 
       inline int y() const {return (int)rint(y_);}
       
+      inline float fx() const {return x_;} 
+      inline float fy() const {return y_;}
+      
       // euclidean distance to other coordinate
       double Dist(const Coordinate &other) const;
       
@@ -30,10 +33,12 @@ namespace Graphics2D {
       Coordinate operator-(const Coordinate &other);
       // multiplication with scalar
       Coordinate operator*(float scalar);
+      float operator*(const Coordinate& other);
       
       // rotate coordinate around origin with angle in radians
       void Rotate(const Coordinate &origin, float angle);
 
+      float Length();
     protected:
       float x_,y_;
   };

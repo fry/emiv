@@ -91,10 +91,10 @@ namespace Graphics2D {
     }
   }
   
-  void StructureTensor::HarrisCornerDetector(Image &corners) {
+  void StructureTensor::HarrisCornerDetector(std::vector<Coordinate>& corners) {
     int w = (int)gxx_.GetWidth();
     int h = (int)gxx_.GetHeight();
-    corners.Init(w, h);
+
     PrimitivePoint corner;
     corner.SetColor(Color::blue());
 
@@ -122,17 +122,19 @@ namespace Graphics2D {
     }
     Image strength;
     v.GetAsGreyImage(strength);
-    strength.SavePPM("harris-strength.ppm");
     
-    Filter::NonMaximumSuppression(v, vmax, 0.0005, 21);
+    Filter::NonMaximumSuppression(v, vmax, 0.0000000005);
     
     for (int y=0;y<h;y++) {
       for (int x=0;x<w;x++) {
         if (vmax.GetPixel(x,y)>0) {
+          corners.push_back(Coordinate(x, y));
           corner.SetCoordinate(Coordinate(x,y));
-          corner.Draw(&corners);
+          corner.Draw(&strength);
         }
       }
     }
+    
+    strength.SavePPM("harris-strength.ppm");
   }
 }

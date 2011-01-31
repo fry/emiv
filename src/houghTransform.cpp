@@ -28,6 +28,7 @@ int main(int argc, char** argv) {
   StructureTensor tens;
   tens.SetFromImage(img);
   
+  lines.clear();
   trans.FastHoughTransform(tens, 2, lines);
   save_image_lines("lines_fast.ppm", img, lines);
   

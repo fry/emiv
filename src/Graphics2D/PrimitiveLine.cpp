@@ -146,4 +146,10 @@ namespace Graphics2D {
     return true;
   }
   
+  float PrimitiveLine::Distance(const Coordinate& coord) {
+    Coordinate direction = coords_[1] - coords_[0];
+    Coordinate normal(direction.fx(), -direction.fy());
+    normal = normal * (1.0f / normal.Length());
+    return normal * (coords_[1] - coord);
+  }
 }

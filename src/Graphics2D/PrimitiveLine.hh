@@ -64,6 +64,8 @@ namespace Graphics2D {
       inline int intersection() {
         return rint(intersection_);
       }
+      
+      float Distance(const Coordinate& coord);
     protected:
       // if line is y=ax+b, dxdy is 1/a. Set by SetCoordinates
       float dxdy_;

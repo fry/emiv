@@ -2,9 +2,9 @@
 #ifndef HOUGHTRANSFORM_HH_
 #define HOUGHTRANSFORM_HH_
 #include <vector>
-#include <Graphics2DBase/FloatImage.hh>
 #include <Graphics2D/Image.hh>
 #include <Graphics2D/PrimitiveLine.hh>
+#include <Graphics2DBase/FloatImage.hh>
 #include <Graphics2D/StructureTensor.hh>
 
 namespace Graphics2D {
@@ -59,7 +59,6 @@ namespace Graphics2D {
       
       /// image representation of 2d hough histogram
       FloatImage houghspace_;
-      int resolution_;
   };
 
 }
