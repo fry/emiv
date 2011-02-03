@@ -148,8 +148,12 @@ namespace Graphics2D {
   
   float PrimitiveLine::Distance(const Coordinate& coord) {
     Coordinate direction = coords_[1] - coords_[0];
-    Coordinate normal(direction.fx(), -direction.fy());
+    Coordinate normal(direction.fy(), -direction.fx());
     normal = normal * (1.0f / normal.Length());
     return normal * (coord - coords_[0]);
+  }
+  
+  int PrimitiveLine::Intersection(const PrimitiveLine& other, Coordinate& out_intersect) {
+    
   }
 }

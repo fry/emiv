@@ -66,6 +66,8 @@ namespace Graphics2D {
       }
       
       float Distance(const Coordinate& coord);
+      
+      int Intersection(const PrimitiveLine& other, Coordinate& out_intersect);
     protected:
       // if line is y=ax+b, dxdy is 1/a. Set by SetCoordinates
       float dxdy_;
