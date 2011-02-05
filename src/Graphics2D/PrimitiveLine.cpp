@@ -153,7 +153,30 @@ namespace Graphics2D {
     return normal * (coord - coords_[0]);
   }
   
-  int PrimitiveLine::Intersection(const PrimitiveLine& other, Coordinate& out_intersect) {
+  void PrimitiveLine::Intersection(const PrimitiveLine& other, Coordinate& out_intersect) const {
+    const Coordinate start = coords_[0];
+    const Coordinate end = coords_[1];
+    const Coordinate other_start = other.coords_[0];
+    const Coordinate other_end = other.coords_[1];
     
+    const float x1 = start.fx();
+    const float y1 = start.fy();
+    const float x2 = end.fx();
+    const float y2 = end.fy();
+    
+    const float x3 = other_start.fx();
+    const float y3 = other_start.fy();
+    const float x4 = other_end.fx();
+    const float y4 = other_end.fy();
+    
+    const float x =
+      ((x1*y2 - y1*x2) * (x3 - x4) - (x1 - x2) * (x3*y4 - y3*x4)) /
+      ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
+    
+    const float y = 
+      ((x1*y2 - y1*x2) * (y3 - y4) - (y1 - y2) * (x3*y4 - y3*x4)) / 
+      ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
+      
+    out_intersect.Set(x, y);
   }
 }
