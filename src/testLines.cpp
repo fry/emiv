@@ -16,13 +16,16 @@ int main(int argc, char** argv) {
   StructureTensor t;
   t.SetFromImage(img);
   
+  // detect corners
   std::vector<Coordinate> corners;
   t.HarrisCornerDetector(corners);
 
+  // detect lines
   std::vector<PrimitiveLine> lines;
   HoughTransform hough;
   hough.StandardHoughTransform(img, 2, lines);
   
+  // associate lines <-> corners
   typedef std::map<Coordinate*, std::vector<PrimitiveLine*> > pl_type;
   typedef std::map<PrimitiveLine*, std::vector<Coordinate*> > lp_type;
   pl_type point_line;
@@ -31,9 +34,11 @@ int main(int argc, char** argv) {
     iter->SetColor(Color::red());
     iter->Draw(&img);
     
+    // compare corner <-> line distance for every corner
     std::cout << "line" << std::endl;
     for (std::vector<Coordinate>::iterator iter2 = corners.begin(); iter2 != corners.end(); ++iter2) {
       float distance = iter->Distance(*iter2);
+      // associate corner <-> line if distance is low enough
       if (std::abs(distance) < 10) {
         point_line[&*iter2].push_back(&*iter);
         line_point[&*iter].push_back(&*iter2);
@@ -43,7 +48,6 @@ int main(int argc, char** argv) {
   }
   
   // iterate through all edges, calculate intersections, and print distances
-  PrimitivePolygon pol;
   std::vector<Coordinate> points;
   for (std::vector<Coordinate>::iterator iter = corners.begin(); iter != corners.end(); ++iter) {
     std::vector<PrimitiveLine*>& intersect_lines(point_line[&*iter]);
@@ -53,6 +57,7 @@ int main(int argc, char** argv) {
     const PrimitiveLine& line1 = *intersect_lines[0];
     const PrimitiveLine& line2 = *intersect_lines[1];
     
+    // remember intersection point for polygon
     Coordinate cut;
     line1.Intersection(line2, cut);
     points.push_back(cut);
@@ -60,6 +65,7 @@ int main(int argc, char** argv) {
     std::cout << "intersection distance " << cut.Dist(*iter) << ": " << cut.fx() << "," << cut.fy() << std::endl;
   }
   
+  // draw lines connection the edges
   for (lp_type::iterator iter = line_point.begin(); iter != line_point.end(); ++iter) {
     std::vector<Coordinate> line_points;
     PrimitiveLine line;
@@ -70,7 +76,25 @@ int main(int argc, char** argv) {
     line.Draw(&img);
   }
   
+  // draw the polygon in its own picture
+  Image polyimg;
+  polyimg.Init(img.GetWidth(), img.GetHeight());
+  polyimg.FillZero();
+  
+  PrimitivePolygon pol;
+  // a closed polygon
+  points.push_back(*points.begin());
+  // edges aren't in the right order right away, so have to fix it up for this particular test
+  // polygon.. should probably do this more generic
+  std::swap(points[2], points[3]);
+  pol.SetCoordinates(points);
+  pol.SetColor(Color::red());
+  pol.Draw(&polyimg);
+   
   img.SavePPM("detectlines.ppm");
+  std::cout << "saved detectlines.ppm" << std::endl;
+  polyimg.SavePPM("polygon.ppm");
+  std::cout << "saved polygon.ppm" << std::endl;
   
   return 0;
 }
