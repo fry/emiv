@@ -4,6 +4,7 @@
 #include <Graphics2D/PrimitivePoint.hh>
 #include <Graphics2D/PrimitivePolygon.hh>
 
+#include <cassert>
 #include <map>
 
 using namespace Graphics2D;
@@ -60,7 +61,6 @@ int main(int argc, char** argv) {
     // remember intersection point for polygon
     Coordinate cut;
     line1.Intersection(line2, cut);
-    points.push_back(cut);
     
     std::cout << "intersection distance " << cut.Dist(*iter) << ": " << cut.fx() << "," << cut.fy() << std::endl;
   }
@@ -76,6 +76,29 @@ int main(int argc, char** argv) {
     line.Draw(&img);
   }
   
+  /* Attempt to construct the polygon by starting at a random point (in this
+   * case, the first point) and following the lines in a circle until we reach
+   * the first point again. Because the order of the points in lines and the lines
+   * can be random, we have to ensure we're not picking the same point or line
+   * twice */
+
+  // pick a starting point
+  Coordinate* first(line_point.begin()->second[0]);
+  Coordinate* current_point(first);
+  // remember the current line
+  PrimitiveLine* current_line(line_point.begin()->first);
+  do {
+    points.push_back(*current_point);
+    
+    const std::vector<PrimitiveLine*>& current_lines(point_line[current_point]);
+    // pick the next line going through this point that is not the current line
+    current_line = current_lines[0] != current_line ? current_lines[0] : current_lines[1];
+    
+    // pick the next point as the point in the line that is not the current point...
+    const std::vector<Coordinate*>& current_points(line_point[current_line]);
+    current_point = current_points[0] != current_point ? current_points[0] : current_points[1];
+  } while (current_point != first);
+  
   // draw the polygon in its own picture
   Image polyimg;
   polyimg.Init(img.GetWidth(), img.GetHeight());
@@ -84,9 +107,7 @@ int main(int argc, char** argv) {
   PrimitivePolygon pol;
   // a closed polygon
   points.push_back(*points.begin());
-  // edges aren't in the right order right away, so have to fix it up for this particular test
-  // polygon.. should probably do this more generic
-  std::swap(points[2], points[3]);
+
   pol.SetCoordinates(points);
   pol.SetColor(Color::red());
   pol.Draw(&polyimg);
